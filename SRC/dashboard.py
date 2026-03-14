@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 import os
 
-API = os.getenv("API_URL", "http://127.0.0.1:8000")
+API = st.secrets.get("API_URL", "http://127.0.0.1:8000")
 
 # locate database folder safely
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))

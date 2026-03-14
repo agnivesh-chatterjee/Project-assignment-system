@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 import os
 
-API = st.secrets.get("API_URL", "http://127.0.0.1:8000")
+API = "https://project-assignment-system-2.onrender.com"
 
 # locate database folder safely
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))

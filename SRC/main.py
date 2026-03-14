@@ -1,7 +1,7 @@
-## main.py
 from fastapi import FastAPI
 import pandas as pd
 from . import team_formation
+from . import matchscore_generator
 import os
 
 app = FastAPI()
@@ -34,6 +34,14 @@ def save_projects(df):
     df.to_csv(projects_path, index=False)
 
 
+def recompute_all():
+    """
+    Regenerates compatibility scores and optimal teams
+    """
+    matchscore_generator.generate_match_scores()
+    team_formation.form_teams()
+
+
 # ---------------- STUDENTS ----------------
 
 @app.get("/students")
@@ -54,7 +62,10 @@ def add_student(student: dict):
 
     save_students(students)
 
-    return {"status": "student added"}
+    # recompute scores + teams
+    recompute_all()
+
+    return {"status": "student added and teams recomputed"}
 
 
 @app.delete("/students/{name}")
@@ -66,7 +77,10 @@ def delete_student(name: str):
 
     save_students(students)
 
-    return {"status": "student removed"}
+    # recompute scores + teams
+    recompute_all()
+
+    return {"status": "student removed and teams recomputed"}
 
 
 # ---------------- PROJECTS ----------------
@@ -91,7 +105,10 @@ def add_project(project: dict):
 
     save_projects(projects)
 
-    return {"status": "project added"}
+    # recompute scores + teams
+    recompute_all()
+
+    return {"status": "project added and teams recomputed"}
 
 
 @app.delete("/projects/{project_name}")
@@ -103,14 +120,17 @@ def delete_project(project_name: str):
 
     save_projects(projects)
 
-    return {"status": "project removed"}
+    # recompute scores + teams
+    recompute_all()
+
+    return {"status": "project removed and teams recomputed"}
 
 
-# ---------------- TEAM RECOMPUTE ----------------
+# ---------------- MANUAL RECOMPUTE ----------------
 
 @app.post("/recompute")
 def recompute():
 
-    team_formation.form_teams()
+    recompute_all()
 
-    return {"status": "teams recomputed"}
+    return {"status": "match scores and teams recomputed"}

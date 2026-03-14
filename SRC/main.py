@@ -122,10 +122,22 @@ def delete_project(project_name: str):
 
 @app.post("/recompute")
 def recompute():
+    import traceback
 
-    team_formation.form_teams()
+    print("=== RECOMPUTE START ===", flush=True)
 
-    return {"status": "teams recomputed"}
+    try:
+        result = team_formation.form_teams()
+        print("=== RECOMPUTE SUCCESS ===", flush=True)
+        return {
+            "status": "teams recomputed",
+            "rows_written": 0 if result is None else len(result)
+        }
+
+    except Exception as e:
+        print("=== RECOMPUTE FAILED ===", flush=True)
+        print(traceback.format_exc(), flush=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
 teams_path = os.path.join(DATA_DIR, "project_teams.csv")

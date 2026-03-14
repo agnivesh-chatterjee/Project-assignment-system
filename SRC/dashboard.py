@@ -233,6 +233,12 @@ elif menu == "Match Scores":
 elif menu == "Teams":
 
     st.header("Suggested Teams")
+    
+    if st.button("Recompute Teams"):
+        resp = requests.post(f"{API}/recompute")
+        resp.raise_for_status()
+        st.success("Teams recomputed")
+        st.rerun()
 
     try:
         teams = requests.get(f"{API}/teams")

@@ -242,9 +242,10 @@ elif menu == "Match Scores":
     st.header("Compatibility Matrix")
 
     try:
-        scores = requests.get(f"{API}/scores",timeout=30)
-        scores.raise_for_status()
-        df = pd.DataFrame(scores.json())
+        with st.spinner("Loading compatibility scores..."):
+            scores = requests.get(f"{API}/scores",timeout=30)
+            scores.raise_for_status()
+            df = pd.DataFrame(scores.json())
 
         st.dataframe(
             df.style.background_gradient(cmap="viridis"),
@@ -263,17 +264,18 @@ elif menu == "Teams":
     
     if st.button("Recompute Teams"):
         try:
-            resp = requests.post(f"{API}/recompute",timeout=300)
-            resp.raise_for_status()
+            with st.spinner("Recomputing teams..."):
+                resp = requests.post(f"{API}/recompute",timeout=300)
+                resp.raise_for_status()
             st.success("Teams recomputed")
-            st.rerun()
         except Exception as e:
             st.error(f"Recompute failed: {e}")
 
     try:
-        teams = requests.get(f"{API}/teams",timeout=30)
-        teams.raise_for_status()
-        df = pd.DataFrame(teams.json())
+        with st.spinner("Loading teams..."):
+            teams = requests.get(f"{API}/teams",timeout=60)
+            teams.raise_for_status()
+            df = pd.DataFrame(teams.json())
 
         st.dataframe(df, use_container_width=True)
 

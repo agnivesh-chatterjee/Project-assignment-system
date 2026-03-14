@@ -3,6 +3,7 @@ import pandas as pd
 import subprocess
 import itertools
 import os
+import sys
 from pulp import (
     LpProblem, LpMaximize, LpVariable, lpSum, LpBinary,
     PULP_CBC_CMD, value, LpStatus
@@ -28,9 +29,10 @@ OUTPUT_FILE = os.path.join(DATA_DIR, "project_teams.csv")
 def generate_scores():
 
     result = subprocess.run(
-        ["py", "SRC/matchscore_generator.py"],
+        [sys.executable, os.path.join(BASE_DIR, "SRC", "matchscore_generator.py")],
         capture_output=True,
-        text=True
+        text=True,
+        cwd=BASE_DIR
     )
 
     print(result.stdout)

@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from pathlib import Path
 
-API = "https://project-assignment-system-2.onrender.com"
+API = "https://project-assignment-system-krrk.onrender.com"
 
 # locate repo root and database folder safely
 ROOT = Path(__file__).resolve().parents[1]

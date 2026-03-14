@@ -1,8 +1,17 @@
 ## matchscore generator
 import pandas as pd
+import os
 
-students = pd.read_csv("students.csv")
-projects = pd.read_csv("projects.csv")
+# Locate database folder
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "database")
+
+students_path = os.path.join(DATA_DIR, "students.csv")
+projects_path = os.path.join(DATA_DIR, "projects.csv")
+scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
+
+students = pd.read_csv(students_path)
+projects = pd.read_csv(projects_path)
 
 # Normalize project skill column names
 projects = projects.rename(columns={
@@ -67,5 +76,7 @@ matches = matches[["student","project","match_score","preference_bonus","final_s
 
 print(matches.head())
 
-# Save results
-matches.to_csv("student_project_final_scores.csv", index=False)
+# Save results to database folder
+matches.to_csv(scores_path, index=False)
+
+print("\nstudent_project_final_scores.csv generated")

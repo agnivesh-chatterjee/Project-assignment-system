@@ -1,4 +1,4 @@
-# team formation
+# team_formation.py
 import pandas as pd
 import subprocess
 import itertools
@@ -28,7 +28,7 @@ OUTPUT_FILE = os.path.join(DATA_DIR, "project_teams.csv")
 def generate_scores():
 
     result = subprocess.run(
-        ["python", "SRC/matchscore_generator.py"],
+        ["python", os.path.join(BASE_DIR, "SRC", "matchscore_generator.py")],
         capture_output=True,
         text=True
     )
@@ -49,17 +49,9 @@ def form_teams():
     # Step 1: generate latest scores
     generate_scores()
 
-    # ============================================================
-    # CONFIG
-    # ============================================================
-
     ALLOW_SINGLE_MEMBER_TEAMS = False
     COMPLEMENTARITY_WEIGHT = 0.15
     SOLVER_MSG = False
-
-    # ============================================================
-    # HELPERS
-    # ============================================================
 
     SKILL_MAP_STUDENTS = {
         "python": "python",
@@ -171,16 +163,6 @@ def form_teams():
     for _, row in scores_df.iterrows():
         score_lookup[(row["student"], row["project"])] = float(row["final_score"])
 
-    student_skill = {}
-    for _, row in students_df.iterrows():
-        name = str(row["name"])
-        student_skill[name] = {s: float(row[s]) if s in row.index else 0.0 for s in SKILLS}
-
-    project_weight = {}
-    for _, row in projects_df.iterrows():
-        pname = str(row["project_name"])
-        project_weight[pname] = {s: float(row[s]) if s in row.index else 0.0 for s in SKILLS}
-
     for s in students:
         for p in projects:
             if (s, p) not in score_lookup:
@@ -229,6 +211,46 @@ def form_teams():
         if value(var) > 0.5:
             selected_pairs.append(pair_data[idx])
 
+    # ============================================================
+    # HANDLE ODD NUMBER OF STUDENTS
+    # ============================================================
+
+    assigned_students = set()
+
+    for pair in selected_pairs:
+        assigned_students.add(pair["s1"])
+        assigned_students.add(pair["s2"])
+
+    unassigned_students = [s for s in students if s not in assigned_students]
+
+    used_projects = {pair["project"] for pair in selected_pairs}
+
+    for student in unassigned_students:
+
+        best_project = max(
+            projects,
+            key=lambda p: score_lookup.get((student, p), 0)
+        )
+
+        if best_project in used_projects:
+            for p in projects:
+                if p not in used_projects:
+                    best_project = p
+                    break
+
+        selected_pairs.append({
+            "s1": student,
+            "s2": "",
+            "project": best_project,
+            "final_score": score_lookup.get((student, best_project), 0)
+        })
+
+        used_projects.add(best_project)
+
+    # ============================================================
+    # OUTPUT
+    # ============================================================
+
     rows = []
     for row in selected_pairs:
         rows.append({
@@ -249,4 +271,3 @@ def form_teams():
 
 if __name__ == "__main__":
     form_teams()
-

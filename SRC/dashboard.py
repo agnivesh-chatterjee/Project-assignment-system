@@ -1,4 +1,4 @@
-## main.py
+## dashboard.py
 import streamlit as st
 import requests
 import pandas as pd
@@ -46,6 +46,9 @@ if menu == "Students":
         if st.button("Delete Student"):
 
             requests.delete(f"{API}/students/{student_name}")
+
+            # recompute scores and teams
+            requests.post(f"{API}/recompute")
 
             st.success("Student removed")
             st.rerun()
@@ -118,6 +121,9 @@ if menu == "Students":
 
             requests.post(f"{API}/students", json=payload)
 
+            # recompute scores and teams
+            requests.post(f"{API}/recompute")
+
             st.success("Student added")
             st.rerun()
 
@@ -149,6 +155,9 @@ elif menu == "Projects":
         if st.button("Delete Project"):
 
             requests.delete(f"{API}/projects/{project_name}")
+
+            # recompute scores and teams
+            requests.post(f"{API}/recompute")
 
             st.success("Project removed")
             st.rerun()
@@ -190,6 +199,9 @@ elif menu == "Projects":
         }
 
         requests.post(f"{API}/projects", json=payload)
+
+        # recompute scores and teams
+        requests.post(f"{API}/recompute")
 
         st.success("Project added")
         st.rerun()

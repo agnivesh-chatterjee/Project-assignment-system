@@ -234,24 +234,24 @@ def form_teams():
 
 
     pair_vars = {}
-    for idx, row in enumerate(pair_data):
+    for idx, row in pair_data.iterrows():
         pair_vars[idx] = LpVariable(f"pair_{idx}", cat=LpBinary)
 
-    model += lpSum(row["final_score"] * pair_vars[idx] for idx, row in enumerate(pair_data))
+    model += lpSum(row["final_score"] * pair_vars[idx] for idx, row in pair_data.iterrows())
 
     for s in students:
         terms = []
-        for idx, row in enumerate(pair_data):
+        for idx, row in pair_data.iterrows():
             if row["s1"] == s or row["s2"] == s:
                 terms.append(pair_vars[idx])
         model += lpSum(terms) <= 1
 
     for p in projects:
-        terms = [pair_vars[idx] for idx, row in enumerate(pair_data) if row["project"] == p]
+        terms = [pair_vars[idx] for idx, row in pair_data.iterrows() if row["project"] == p]
         model += lpSum(terms) <= 1
 
     print("form_teams: starting solver", flush=True)
-    model.solve()
+    status = model.solve()
     print(f"form_teams: solver finished with status={LpStatus[status]}", flush=True)
 
     selected_pairs = []

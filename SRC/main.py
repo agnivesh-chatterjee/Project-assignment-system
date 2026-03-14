@@ -155,8 +155,12 @@ def load_teams():
 
 @app.get("/scores")
 def get_scores():
-    scores = load_scores()
-    return scores.to_dict(orient="records")
+    try:
+        team_formation.generate_scores()
+        scores = load_scores()
+        return scores.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate scores: {e}")
 
 
 @app.get("/teams")

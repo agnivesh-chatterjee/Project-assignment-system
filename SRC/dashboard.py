@@ -3,8 +3,10 @@ import streamlit as st
 import requests
 import pandas as pd
 from pathlib import Path
+import os
 
-API = "https://project-assignment-system-krrk.onrender.com"
+API = os.getenv("API_BASE_URL", "https://project-assignment-system-krrk.onrender.com")
+
 
 # locate repo root and database folder safely
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,24 +48,33 @@ if menu == "Students":
         )
 
         if st.button("Delete Student"):
+            try:
+                with st.spinner("Removing student and recomputing teams..."):
+                    delete_resp = requests.delete(f"{API}/students/{student_name}", timeout=30)
+                    delete_resp.raise_for_status()
 
-            requests.delete(f"{API}/students/{student_name}")
+                    recompute_resp = requests.post(f"{API}/recompute", timeout=120)
+                    recompute_resp.raise_for_status()
 
-            # recompute scores and teams
-            requests.post(f"{API}/recompute")
+                st.success("Student removed")
+                st.rerun()
+            
+            except Exception as e:
+                st.error(f"Delete student failed: {e}")
 
-            st.success("Student removed")
-            st.rerun()
 
     st.subheader("Add Student")
 
     try:
-        projects = requests.get(f"{API}/projects").json()
+        resp = requests.get(f"{API}/projects", timeout=30)
+        resp.raise_for_status()
+        projects = resp.json()
         project_names = [p["project_name"] for p in projects]
-    except:
+    except Exception:
         project_names = []
 
-    with st.form("student_form"):
+
+    with st.form("student_form",clear_on_submit = True):
 
         st.write("### Basic Information")
 
@@ -102,12 +113,15 @@ if menu == "Students":
         submit = st.form_submit_button("Submit Student")
 
         if submit:
-
+            if name.strip() == "":
+                st.error("Student name cannot be empty")
+                st.stop()
+                
             payload = {
-                "name": name,
-                "college": college,
-                "resume_link": resume,
-                "github_link": github,
+                "name": name.strip(),
+                "college": college.strip(),
+                "resume_link": resume.strip(),
+                "github_link": github.strip(),
                 "python": python_skill,
                 "ml": ml,
                 "api": api,
@@ -120,24 +134,29 @@ if menu == "Students":
                 "pref2": pref2,
                 "pref3": pref3
             }
+        
+        try:
+            with st.spinner("Adding student and recomputing teams..."):
+                add_resp = requests.post(f"{API}/students", json=payload, timeout=30)
+                add_resp.raise_for_status()
 
-            add_resp = requests.post(f"{API}/students", json=payload)
-            add_resp.raise_for_status()
-            # recompute scores and teams
-            recompute_resp = requests.post(f"{API}/recompute")
-            recompute_resp.raise_for_status()
+                recompute_resp = requests.post(f"{API}/recompute", timeout=120)
+                recompute_resp.raise_for_status()
 
             st.success("Student added")
             st.rerun()
+        
+        except Exception as e:
+            st.error(f"Add student failed: {e}")
+
 
 
 # ---------------- PROJECTS ----------------
 
 elif menu == "Projects":
-
     st.header("Projects")
 
-   try:
+    try:
         resp = requests.get(f"{API}/projects", timeout=30)
         resp.raise_for_status()
         projects = resp.json()
@@ -158,14 +177,20 @@ elif menu == "Projects":
         )
 
         if st.button("Delete Project"):
+            try:
+                with st.spinner("Removing project and recomputing teams..."):
+                    delete_resp = requests.delete(f"{API}/projects/{project_name}", timeout=30)
+                    delete_resp.raise_for_status()
 
-            requests.delete(f"{API}/projects/{project_name}")
+                    recompute_resp = requests.post(f"{API}/recompute", timeout=120)
+                    recompute_resp.raise_for_status()
 
-            # recompute scores and teams
-            requests.post(f"{API}/recompute")
+                st.success("Project removed")
+                st.rerun()
 
-            st.success("Project removed")
-            st.rerun()
+            except Exception as e:
+                st.error(f"Delete project failed: {e}")
+
 
     st.subheader("Add Project")
 
@@ -190,9 +215,12 @@ elif menu == "Projects":
         devops = st.slider("DevOps Weight",1,5)
 
     if st.button("Add Project"):
-
+        if project.strip() == "":
+            st.error("Project name cannot be empty")
+            st.stop()
+            
         payload = {
-            "project_name": project,
+            "project_name": project.strip(),
             "Python": python_weight,
             "ML": ml,
             "APIs": api,
@@ -202,14 +230,21 @@ elif menu == "Projects":
             "Viz": viz,
             "DevOps": devops
         }
+        
+        try:
+            with st.spinner("Adding project and recomputing teams..."):
+                add_resp = requests.post(f"{API}/projects", json=payload, timeout=30)
+                add_resp.raise_for_status()
 
-        requests.post(f"{API}/projects", json=payload)
+                recompute_resp = requests.post(f"{API}/recompute", timeout=120)
+                recompute_resp.raise_for_status()
+            
+            st.success("Project added")
+            st.rerun()
+        
+        except Exception as e:
+            st.error(f"Add project failed: {e}")
 
-        # recompute scores and teams
-        requests.post(f"{API}/recompute")
-
-        st.success("Project added")
-        st.rerun()
 
 
 # ---------------- MATCH SCORES ----------------
@@ -219,7 +254,7 @@ elif menu == "Match Scores":
     st.header("Compatibility Matrix")
 
     try:
-        scores = requests.get(f"{API}/scores")
+        scores = requests.get(f"{API}/scores",timeout=30)
         scores.raise_for_status()
         df = pd.DataFrame(scores.json())
 
@@ -240,7 +275,7 @@ elif menu == "Teams":
     
     if st.button("Recompute Teams"):
         try:
-            resp = requests.post(f"{API}/recompute")
+            resp = requests.post(f"{API}/recompute",timeout=120)
             resp.raise_for_status()
             st.success("Teams recomputed")
             st.rerun()
@@ -248,7 +283,7 @@ elif menu == "Teams":
             st.error(f"Recompute failed: {e}")
 
     try:
-        teams = requests.get(f"{API}/teams")
+        teams = requests.get(f"{API}/teams",timeout=30)
         teams.raise_for_status()
         df = pd.DataFrame(teams.json())
 

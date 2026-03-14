@@ -114,3 +114,28 @@ def recompute():
     team_formation.form_teams()
 
     return {"status": "teams recomputed"}
+
+scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
+teams_path = os.path.join(DATA_DIR, "project_teams.csv")
+
+def load_scores():
+    if os.path.exists(scores_path):
+        return pd.read_csv(scores_path)
+    return pd.DataFrame()
+
+def load_teams():
+    if os.path.exists(teams_path):
+        return pd.read_csv(teams_path)
+    return pd.DataFrame()
+
+
+@app.get("/scores")
+def get_scores():
+    scores = load_scores()
+    return scores.to_dict(orient="records")
+
+
+@app.get("/teams")
+def get_teams():
+    teams = load_teams()
+    return teams.to_dict(orient="records")

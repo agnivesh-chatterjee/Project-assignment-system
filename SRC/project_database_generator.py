@@ -1,6 +1,11 @@
 ## second database generator
 import pandas as pd
 import random
+import os
+
+# Locate database folder
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "database")
 
 projects = [
 
@@ -71,9 +76,7 @@ for p in projects:
     rows.append({
 
         "project_name": p,
-
         "description": random.choice(descriptions),
-
         "difficulty": random.choice(["Easy","Medium","Hard"]),
 
         "Python": random.randint(3,5),
@@ -89,6 +92,9 @@ for p in projects:
 
 projects_df = pd.DataFrame(rows)
 
-projects_df.to_csv("projects.csv",index=False)
+# Save into database folder
+projects_path = os.path.join(DATA_DIR, "projects.csv")
+projects_df.to_csv(projects_path, index=False)
 
+print("projects.csv generated")
 print(projects_df.head())

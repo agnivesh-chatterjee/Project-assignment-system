@@ -125,8 +125,12 @@ elif menu == "Projects":
     st.header("Projects")
 
     try:
-        projects = requests.get(f"{API}/projects").json()
-        df = pd.DataFrame(projects)
+        response = requests.get(f"{API}/projects")
+        if response.status_code == 200 and response.text:
+           projects = response.json()
+           df = pd.DataFrame(projects)
+        else:
+           df = pd.DataFrame()
     except Exception as e:
         st.error(e)
         df = pd.DataFrame()

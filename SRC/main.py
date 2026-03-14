@@ -1,12 +1,13 @@
 ## main.py
+
 from fastapi import FastAPI
 import pandas as pd
+import team_formation
 
 app = FastAPI()
 
 students = pd.read_csv("students.csv")
 projects = pd.read_csv("projects.csv")
-
 
 # ---------------- STUDENTS ----------------
 
@@ -18,8 +19,10 @@ def get_students():
 @app.post("/students")
 def add_student(student: dict):
     global students
-    students = pd.concat([students, pd.DataFrame([student])])
+
+    students = pd.concat([students, pd.DataFrame([student])], ignore_index=True)
     students.to_csv("students.csv", index=False)
+
     return {"status": "student added"}
 
 
@@ -41,8 +44,10 @@ def get_projects():
 @app.post("/projects")
 def add_project(project: dict):
     global projects
-    projects = pd.concat([projects, pd.DataFrame([project])])
+
+    projects = pd.concat([projects, pd.DataFrame([project])], ignore_index=True)
     projects.to_csv("projects.csv", index=False)
+
     return {"status": "project added"}
 
 
@@ -52,3 +57,11 @@ def delete_project(project_name: str):
     projects = projects[projects["project_name"] != project_name]
     projects.to_csv("projects.csv", index=False)
     return {"status": "project removed"}
+
+
+# ---------------- TEAM RECOMPUTE ----------------
+
+@app.post("/recompute")
+def recompute():
+    teams = team_formation.form_teams()
+    return {"status": "teams recomputed"}

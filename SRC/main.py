@@ -3,11 +3,20 @@
 from fastapi import FastAPI
 import pandas as pd
 import team_formation
+import os
 
 app = FastAPI()
 
-students = pd.read_csv("students.csv")
-projects = pd.read_csv("projects.csv")
+# Locate database folder
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "database")
+
+students_path = os.path.join(DATA_DIR, "students.csv")
+projects_path = os.path.join(DATA_DIR, "projects.csv")
+
+students = pd.read_csv(students_path)
+projects = pd.read_csv(projects_path)
+
 
 # ---------------- STUDENTS ----------------
 
@@ -21,7 +30,7 @@ def add_student(student: dict):
     global students
 
     students = pd.concat([students, pd.DataFrame([student])], ignore_index=True)
-    students.to_csv("students.csv", index=False)
+    students.to_csv(students_path, index=False)
 
     return {"status": "student added"}
 
@@ -30,7 +39,7 @@ def add_student(student: dict):
 def delete_student(name: str):
     global students
     students = students[students["name"] != name]
-    students.to_csv("students.csv", index=False)
+    students.to_csv(students_path, index=False)
     return {"status": "student removed"}
 
 
@@ -46,7 +55,7 @@ def add_project(project: dict):
     global projects
 
     projects = pd.concat([projects, pd.DataFrame([project])], ignore_index=True)
-    projects.to_csv("projects.csv", index=False)
+    projects.to_csv(projects_path, index=False)
 
     return {"status": "project added"}
 
@@ -55,7 +64,7 @@ def add_project(project: dict):
 def delete_project(project_name: str):
     global projects
     projects = projects[projects["project_name"] != project_name]
-    projects.to_csv("projects.csv", index=False)
+    projects.to_csv(projects_path, index=False)
     return {"status": "project removed"}
 
 
@@ -63,5 +72,5 @@ def delete_project(project_name: str):
 
 @app.post("/recompute")
 def recompute():
-    teams = team_formation.form_teams()
+    team_formation.form_teams()
     return {"status": "teams recomputed"}

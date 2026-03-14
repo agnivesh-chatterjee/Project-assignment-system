@@ -218,6 +218,16 @@ def form_teams():
                 "final_score": final_score
             })
     print(f"form_teams: pair_data rows={len(pair_data)}", flush=True)
+    
+    pair_data = (
+        pair_data
+        .sort_values(["project", "score"], ascending=[True, False])
+        .groupby("project", group_keys=False)
+        .head(150)
+        .reset_index(drop=True)
+    )
+
+    print(f"form_teams: pair_data rows after reduction={len(pair_data)}", flush=True)
 
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
     print("form_teams: model built", flush=True)
@@ -241,7 +251,7 @@ def form_teams():
         model += lpSum(terms) <= 1
 
     print("form_teams: starting solver", flush=True)
-    model.solve(PULP_CBC_CMD(msg=SOLVER_MSG))
+    model.solve()
     print(f"form_teams: solver finished with status={LpStatus[status]}", flush=True)
 
     selected_pairs = []

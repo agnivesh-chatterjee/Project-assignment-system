@@ -3,7 +3,7 @@ import streamlit as st
 import requests
 import pandas as pd
 
-API = "http://127.0.0.1:8000"
+API = st.secrets.get("API_URL", "http://127.0.0.1:8000")
 
 st.set_page_config(page_title="Project–Student Matching Dashboard", layout="wide")
 

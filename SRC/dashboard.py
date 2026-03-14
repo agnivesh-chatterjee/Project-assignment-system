@@ -26,10 +26,12 @@ if menu == "Students":
     st.header("Student Profiles")
 
     try:
-        students = requests.get(f"{API}/students").json()
+        resp = requests.get(f"{API}/students", timeout=30)
+        resp.raise_for_status()
+        students = resp.json()
         df = pd.DataFrame(students)
     except Exception as e:
-        st.error(e)
+        st.error(f"Failed to load students: {e}")
         df = pd.DataFrame()
 
     st.dataframe(df, use_container_width=True)
@@ -135,11 +137,13 @@ elif menu == "Projects":
 
     st.header("Projects")
 
-    try:
-        projects = requests.get(f"{API}/projects").json()
+   try:
+        resp = requests.get(f"{API}/projects", timeout=30)
+        resp.raise_for_status()
+        projects = resp.json()
         df = pd.DataFrame(projects)
     except Exception as e:
-        st.error(e)
+        st.error(f"Failed to load projects: {e}")
         df = pd.DataFrame()
 
     st.dataframe(df, use_container_width=True)

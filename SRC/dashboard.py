@@ -119,10 +119,11 @@ if menu == "Students":
                 "pref3": pref3
             }
 
-            requests.post(f"{API}/students", json=payload)
-
+            add_resp = requests.post(f"{API}/students", json=payload)
+            add_resp.raise_for_status()
             # recompute scores and teams
-            requests.post(f"{API}/recompute")
+            recompute_resp = requests.post(f"{API}/recompute")
+            recompute_resp.raise_for_status()
 
             st.success("Student added")
             st.rerun()

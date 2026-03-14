@@ -135,19 +135,19 @@ if menu == "Students":
                 "pref3": pref3
             }
         
-        try:
-            with st.spinner("Adding student and recomputing teams..."):
-                add_resp = requests.post(f"{API}/students", json=payload, timeout=30)
-                add_resp.raise_for_status()
+            try:
+                with st.spinner("Adding student and recomputing teams..."):
+                    add_resp = requests.post(f"{API}/students", json=payload, timeout=30)
+                    add_resp.raise_for_status()
 
-                recompute_resp = requests.post(f"{API}/recompute", timeout=120)
-                recompute_resp.raise_for_status()
+                    recompute_resp = requests.post(f"{API}/recompute", timeout=120)
+                    recompute_resp.raise_for_status()
 
-            st.success("Student added")
-            st.rerun()
+                st.success("Student added")
+                st.rerun()
         
-        except Exception as e:
-            st.error(f"Add student failed: {e}")
+            except Exception as e:
+                st.error(f"Add student failed: {e}")
 
 
 

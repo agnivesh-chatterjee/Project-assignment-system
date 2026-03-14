@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Project Form</title>
+</head>
+
+<body>
+
+<h2>Student Information</h2>
+
+<form action="http://127.0.0.1:8000/students" method="post">
+
+<label>Name:</label><br>
+<input type="text" name="name"><br><br>
+
+<label>College:</label><br>
+<input type="text" name="college"><br><br>
+
+<label>Resume Link:</label><br>
+<input type="url" name="resume"><br><br>
+
+<label>GitHub Profile:</label><br>
+<input type="url" name="github"><br><br>
+
+<h3>Top 3 Previous Projects</h3>
+
+<input type="text" name="project1" placeholder="Project 1"><br>
+<input type="text" name="project2" placeholder="Project 2"><br>
+<input type="text" name="project3" placeholder="Project 3"><br>
+
+<h3>Skills (Rate 1–5)</h3>
+
+<label>Python</label>
+<input type="number" name="python" min="1" max="5"><br>
+
+<label>Machine Learning</label>
+<input type="number" name="ml" min="1" max="5"><br>
+
+<label>APIs</label>
+<input type="number" name="api" min="1" max="5"><br>
+
+<label>Frontend</label>
+<input type="number" name="frontend" min="1" max="5"><br>
+
+<label>Data Analysis</label>
+<input type="number" name="data_analysis" min="1" max="5"><br>
+
+<label>Systems / Debugging</label>
+<input type="number" name="systems" min="1" max="5"><br>
+
+<label>Data Visualization</label>
+<input type="number" name="viz" min="1" max="5"><br>
+
+<label>DevOps</label>
+<input type="number" name="devops" min="1" max="5"><br>
+
+<h3>Preferred Projects</h3>
+
+<input type="text" name="pref1" placeholder="Preferred Project 1"><br>
+<input type="text" name="pref2" placeholder="Preferred Project 2"><br>
+<input type="text" name="pref3" placeholder="Preferred Project 3"><br>
+
+<br>
+<button type="submit">Submit</button>
+
+</form>
+
+</body>
+</html>

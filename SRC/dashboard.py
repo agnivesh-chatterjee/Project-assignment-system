@@ -53,9 +53,6 @@ if menu == "Students":
                     delete_resp = requests.delete(f"{API}/students/{student_name}", timeout=30)
                     delete_resp.raise_for_status()
 
-                    recompute_resp = requests.post(f"{API}/recompute", timeout=120)
-                    recompute_resp.raise_for_status()
-
                 st.success("Student removed")
                 st.rerun()
             
@@ -140,9 +137,6 @@ if menu == "Students":
                     add_resp = requests.post(f"{API}/students", json=payload, timeout=30)
                     add_resp.raise_for_status()
 
-                    recompute_resp = requests.post(f"{API}/recompute", timeout=120)
-                    recompute_resp.raise_for_status()
-
                 st.success("Student added")
                 st.rerun()
         
@@ -181,9 +175,6 @@ elif menu == "Projects":
                 with st.spinner("Removing project and recomputing teams..."):
                     delete_resp = requests.delete(f"{API}/projects/{project_name}", timeout=30)
                     delete_resp.raise_for_status()
-
-                    recompute_resp = requests.post(f"{API}/recompute", timeout=120)
-                    recompute_resp.raise_for_status()
 
                 st.success("Project removed")
                 st.rerun()
@@ -235,9 +226,6 @@ elif menu == "Projects":
             with st.spinner("Adding project and recomputing teams..."):
                 add_resp = requests.post(f"{API}/projects", json=payload, timeout=30)
                 add_resp.raise_for_status()
-
-                recompute_resp = requests.post(f"{API}/recompute", timeout=120)
-                recompute_resp.raise_for_status()
             
             st.success("Project added")
             st.rerun()
@@ -275,7 +263,7 @@ elif menu == "Teams":
     
     if st.button("Recompute Teams"):
         try:
-            resp = requests.post(f"{API}/recompute",timeout=120)
+            resp = requests.post(f"{API}/recompute",timeout=300)
             resp.raise_for_status()
             st.success("Teams recomputed")
             st.rerun()

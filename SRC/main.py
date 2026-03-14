@@ -125,6 +125,34 @@ def delete_project(project_name: str):
 
     return {"status": "project removed and teams recomputed"}
 
+# ---------------- MATCH SCORES ----------------
+
+@app.get("/scores")
+def get_scores():
+
+    scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
+
+    if not os.path.exists(scores_path):
+        return []
+
+    df = pd.read_csv(scores_path)
+
+    return df.to_dict(orient="records")
+
+
+# ---------------- TEAMS ----------------
+
+@app.get("/teams")
+def get_teams():
+
+    teams_path = os.path.join(DATA_DIR, "project_teams.csv")
+
+    if not os.path.exists(teams_path):
+        return []
+
+    df = pd.read_csv(teams_path)
+
+    return df.to_dict(orient="records")
 
 # ---------------- MANUAL RECOMPUTE ----------------
 

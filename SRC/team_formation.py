@@ -34,6 +34,10 @@ def generate_scores():
         cwd=BASE_DIR
     )
 
+    print("generate_scores: subprocess finished", flush=True)
+    print("generate_scores stdout:", result.stdout, flush=True)
+    print("generate_scores stderr:", result.stderr, flush=True)
+    print(f"generate_scores returncode: {result.returncode}", flush=True)
     print(result.stdout)
     print(result.stderr)
 
@@ -47,9 +51,12 @@ def generate_scores():
 
 def form_teams():
 
+    print("form_teams: entered", flush=True)
+
     # Step 1: generate latest scores
     generate_scores()
 
+    print("form_teams: scores generated", flush=True)
     # ============================================================
     # CONFIG
     # ============================================================
@@ -117,10 +124,14 @@ def form_teams():
     # LOAD DATA
     # ============================================================
 
+    print("form_teams: reading csv files", flush=True)
+
     scores_df = pd.read_csv(SCORES_FILE)
     students_df = pd.read_csv(STUDENTS_FILE)
     projects_df = pd.read_csv(PROJECTS_FILE)
 
+    print("form_teams: csv files loaded", flush=True)
+    
     scores_df = normalize_columns(scores_df)
     students_df = normalize_columns(students_df)
     projects_df = normalize_columns(projects_df)
@@ -158,6 +169,9 @@ def form_teams():
 
     students = sorted(scores_df["student"].unique().tolist())
     projects = sorted(projects_df["project_name"].unique().tolist())
+
+    print(f"form_teams: students={len(students)}, projects={len(projects)}", flush=True)
+
 
     if len(students) == 0:
         raise ValueError("No valid students found after merging files.")
@@ -203,8 +217,11 @@ def form_teams():
                 "project": p,
                 "final_score": final_score
             })
+    print(f"form_teams: pair_data rows={len(pair_data)}", flush=True)
 
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
+    print("form_teams: model built", flush=True)
+
 
     pair_vars = {}
     for idx, row in enumerate(pair_data):
@@ -223,12 +240,15 @@ def form_teams():
         terms = [pair_vars[idx] for idx, row in enumerate(pair_data) if row["project"] == p]
         model += lpSum(terms) <= 1
 
+    print("form_teams: starting solver", flush=True)
     model.solve(PULP_CBC_CMD(msg=SOLVER_MSG))
+    print(f"form_teams: solver finished with status={LpStatus[status]}", flush=True)
 
     selected_pairs = []
     for idx, var in pair_vars.items():
         if value(var) > 0.5:
             selected_pairs.append(pair_data[idx])
+    print(f"form_teams: selected_pairs={len(selected_pairs)}", flush=True)
 
     rows = []
     for row in selected_pairs:
@@ -243,7 +263,7 @@ def form_teams():
 
     output_df.to_csv(OUTPUT_FILE, index=False)
 
-    print(f"Output written to: {OUTPUT_FILE}")
+    print(f"Output written to: {OUTPUT_FILE}",flush=True)
 
     return output_df
 

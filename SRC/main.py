@@ -1,7 +1,7 @@
 ## main.py
 from fastapi import FastAPI
 import pandas as pd
-import team_formation
+from . import team_formation
 import os
 
 app = FastAPI()

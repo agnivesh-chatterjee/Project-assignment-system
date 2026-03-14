@@ -208,8 +208,12 @@ def form_teams():
     student_pairs = list(itertools.combinations(students, 2))
 
     pair_data = []
-    for s1, s2 in student_pairs:
-        for p in projects:
+    top_students_per_project = 20
+    for p in projects:
+        project_scores = [(s,score_lookup[(s,p)]) for s in students]
+        project_scores.sort(key=lambda x: x[1],reverse=True)
+        top_students = [s for s,_ in project_scores[:top_students_per_project]]
+        for s1,s2 in itertools.combinations(top_students,2:
             final_score = score_lookup[(s1, p)] + score_lookup[(s2, p)]
             pair_data.append({
                 "s1": s1,
@@ -217,17 +221,14 @@ def form_teams():
                 "project": p,
                 "final_score": final_score
             })
-    print(f"form_teams: pair_data rows before reduction={len(pair_data)}", flush=True)
+    print(f"form_teams: pair_data rows before dataframe={len(pair_data)}", flush=True)
     pair_data = pd.DataFrame(pair_data)
     pair_data = (
         pair_data
-        .sort_values(["project", "final_score"], ascending=[True, False])
-        .groupby("project", group_keys=False)
-        .head(150)
         .reset_index(drop=True)
     )
 
-    print(f"form_teams: pair_data rows after reduction={len(pair_data)}", flush=True)
+    print(f"form_teams: pair_data rows after dataframe={len(pair_data)}", flush=True)
 
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
     print("form_teams: model built", flush=True)

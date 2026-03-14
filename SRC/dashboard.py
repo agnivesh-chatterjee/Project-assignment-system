@@ -7,39 +7,73 @@ API = "https://project-assignment-system-2.onrender.com"
 st.set_page_config(page_title="Project–Student Matching Dashboard", layout="wide")
 st.title("Project–Student Matching Dashboard")
 
-# ---------------- SAFE API CALL ----------------
+
+# ============================================================
+# SAFE API FUNCTIONS
+# ============================================================
 
 def api_get(endpoint):
+
     try:
-        r = requests.get(f"{API}/{endpoint}", timeout=10)
-        if r.status_code == 200 and r.text:
+        r = requests.get(f"{API}/{endpoint}", timeout=20)
+
+        if r.status_code == 200:
             return r.json()
-    except:
-        pass
+
+        st.error(f"API error {r.status_code} for {endpoint}")
+
+    except Exception as e:
+        st.error(f"Connection failed: {e}")
+
     return []
 
+
 def api_post(endpoint, payload=None):
+
     try:
-        requests.post(f"{API}/{endpoint}", json=payload, timeout=20)
-    except:
-        pass
+        r = requests.post(f"{API}/{endpoint}", json=payload, timeout=30)
+
+        if r.status_code != 200:
+            st.error(f"POST failed: {endpoint}")
+
+    except Exception as e:
+        st.error(f"POST error: {e}")
+
 
 def api_delete(endpoint):
-    try:
-        requests.delete(f"{API}/{endpoint}", timeout=10)
-    except:
-        pass
 
-# ---------------- MENU ----------------
+    try:
+        r = requests.delete(f"{API}/{endpoint}", timeout=20)
+
+        if r.status_code != 200:
+            st.error(f"DELETE failed: {endpoint}")
+
+    except Exception as e:
+        st.error(f"DELETE error: {e}")
+
+
+def recompute_pipeline():
+
+    with st.spinner("Recomputing match scores and teams..."):
+
+        api_post("recompute")
+
+    st.success("Matching pipeline completed")
+
+
+# ============================================================
+# MENU
+# ============================================================
 
 menu = st.sidebar.selectbox(
     "Navigation",
     ["Students","Projects","Match Scores","Teams"]
 )
 
-# ===============================
+
+# ============================================================
 # STUDENTS
-# ===============================
+# ============================================================
 
 if menu == "Students":
 
@@ -56,16 +90,14 @@ if menu == "Students":
 
     if not df.empty and "name" in df.columns:
 
-        student_name = st.selectbox(
-            "Select Student to Remove",
-            df["name"]
-        )
+        student_name = st.selectbox("Select Student", df["name"])
 
         if st.button("Delete Student"):
 
             api_delete(f"students/{student_name}")
 
-            st.success("Student removed")
+            recompute_pipeline()
+
             st.rerun()
 
     # ---------- ADD STUDENT ----------
@@ -87,7 +119,7 @@ if menu == "Students":
 
         st.write("### Skills (1–5)")
 
-        col1, col2, col3, col4 = st.columns(4)
+        col1,col2,col3,col4 = st.columns(4)
 
         with col1:
             python_skill = st.slider("Python",1,5)
@@ -115,6 +147,10 @@ if menu == "Students":
 
         if submit:
 
+            if not name.strip():
+                st.error("Student name required")
+                st.stop()
+
             payload = {
                 "name": name,
                 "college": college,
@@ -135,12 +171,16 @@ if menu == "Students":
 
             api_post("students", payload)
 
+            recompute_pipeline()
+
             st.success("Student added")
+
             st.rerun()
 
-# ===============================
+
+# ============================================================
 # PROJECTS
-# ===============================
+# ============================================================
 
 elif menu == "Projects":
 
@@ -151,31 +191,25 @@ elif menu == "Projects":
 
     st.dataframe(df, use_container_width=True)
 
-    # ---------- REMOVE PROJECT ----------
-
     st.subheader("Remove Project")
 
     if not df.empty and "project_name" in df.columns:
 
-        project_name = st.selectbox(
-            "Select Project to Remove",
-            df["project_name"]
-        )
+        project_name = st.selectbox("Select Project", df["project_name"])
 
         if st.button("Delete Project"):
 
             api_delete(f"projects/{project_name}")
 
-            st.success("Project removed")
-            st.rerun()
+            recompute_pipeline()
 
-    # ---------- ADD PROJECT ----------
+            st.rerun()
 
     st.subheader("Add Project")
 
     project = st.text_input("Project Name")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1,col2,col3,col4 = st.columns(4)
 
     with col1:
         python_weight = st.slider("Python Weight",1,5)
@@ -195,6 +229,10 @@ elif menu == "Projects":
 
     if st.button("Add Project"):
 
+        if not project.strip():
+            st.error("Project name required")
+            st.stop()
+
         payload = {
             "project_name": project,
             "Python": python_weight,
@@ -209,12 +247,16 @@ elif menu == "Projects":
 
         api_post("projects", payload)
 
+        recompute_pipeline()
+
         st.success("Project added")
+
         st.rerun()
 
-# ===============================
+
+# ============================================================
 # MATCH SCORES
-# ===============================
+# ============================================================
 
 elif menu == "Match Scores":
 
@@ -224,16 +266,17 @@ elif menu == "Match Scores":
     df = pd.DataFrame(scores)
 
     if df.empty:
-        st.warning("Compatibility scores not generated yet.")
+        st.warning("Compatibility scores not generated yet")
     else:
         st.dataframe(
             df.style.background_gradient(cmap="viridis"),
             use_container_width=True
         )
 
-# ===============================
+
+# ============================================================
 # TEAMS
-# ===============================
+# ============================================================
 
 elif menu == "Teams":
 
@@ -243,13 +286,12 @@ elif menu == "Teams":
     df = pd.DataFrame(teams)
 
     if df.empty:
-        st.warning("Teams not generated yet.")
+        st.warning("Teams not generated yet")
     else:
         st.dataframe(df, use_container_width=True)
 
     if st.button("Recompute Teams"):
 
-        api_post("recompute")
+        recompute_pipeline()
 
-        st.success("Teams recomputed")
         st.rerun()

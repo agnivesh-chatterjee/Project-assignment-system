@@ -217,11 +217,11 @@ def form_teams():
                 "project": p,
                 "final_score": final_score
             })
-    print(f"form_teams: pair_data rows={len(pair_data)}", flush=True)
-    
+    print(f"form_teams: pair_data rows before reduction={len(pair_data)}", flush=True)
+    pair_data = pd.DataFrame(pair_data)
     pair_data = (
         pair_data
-        .sort_values(["project", "score"], ascending=[True, False])
+        .sort_values(["project", "final_score"], ascending=[True, False])
         .groupby("project", group_keys=False)
         .head(150)
         .reset_index(drop=True)

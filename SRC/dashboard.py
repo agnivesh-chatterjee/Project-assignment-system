@@ -235,10 +235,13 @@ elif menu == "Teams":
     st.header("Suggested Teams")
     
     if st.button("Recompute Teams"):
-        resp = requests.post(f"{API}/recompute")
-        resp.raise_for_status()
-        st.success("Teams recomputed")
-        st.rerun()
+        try:
+            resp = requests.post(f"{API}/recompute")
+            resp.raise_for_status()
+            st.success("Teams recomputed")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Recompute failed: {e}")
 
     try:
         teams = requests.get(f"{API}/teams")

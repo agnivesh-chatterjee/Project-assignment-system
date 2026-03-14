@@ -1,14 +1,8 @@
-## dashboard.py
 import streamlit as st
 import requests
 import pandas as pd
-from pathlib import Path
 
 API = "https://project-assignment-system-2.onrender.com"
-
-# locate repo root and database folder safely
-ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "database"
 
 st.set_page_config(page_title="Project–Student Matching Dashboard", layout="wide")
 
@@ -46,8 +40,6 @@ if menu == "Students":
         if st.button("Delete Student"):
 
             requests.delete(f"{API}/students/{student_name}")
-
-            # recompute scores and teams
             requests.post(f"{API}/recompute")
 
             st.success("Student removed")
@@ -120,8 +112,6 @@ if menu == "Students":
             }
 
             requests.post(f"{API}/students", json=payload)
-
-            # recompute scores and teams
             requests.post(f"{API}/recompute")
 
             st.success("Student added")
@@ -155,8 +145,6 @@ elif menu == "Projects":
         if st.button("Delete Project"):
 
             requests.delete(f"{API}/projects/{project_name}")
-
-            # recompute scores and teams
             requests.post(f"{API}/recompute")
 
             st.success("Project removed")
@@ -199,8 +187,6 @@ elif menu == "Projects":
         }
 
         requests.post(f"{API}/projects", json=payload)
-
-        # recompute scores and teams
         requests.post(f"{API}/recompute")
 
         st.success("Project added")
@@ -214,8 +200,9 @@ elif menu == "Match Scores":
     st.header("Compatibility Matrix")
 
     try:
-        scores_path = DATA_DIR / "student_project_final_scores.csv"
-        scores = pd.read_csv(scores_path)
+
+        scores = requests.get(f"{API}/scores").json()
+        scores = pd.DataFrame(scores)
 
         st.dataframe(
             scores.style.background_gradient(cmap="viridis"),
@@ -223,6 +210,7 @@ elif menu == "Match Scores":
         )
 
     except Exception as e:
+
         st.warning("Compatibility scores not generated yet.")
         st.write(e)
 
@@ -234,12 +222,14 @@ elif menu == "Teams":
     st.header("Suggested Teams")
 
     try:
-        teams_path = DATA_DIR / "project_teams.csv"
-        teams = pd.read_csv(teams_path)
+
+        teams = requests.get(f"{API}/teams").json()
+        teams = pd.DataFrame(teams)
 
         st.dataframe(teams, use_container_width=True)
 
     except Exception as e:
+
         st.warning("Teams not generated yet.")
         st.write(e)
 

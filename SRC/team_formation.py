@@ -257,7 +257,7 @@ def form_teams():
     selected_pairs = []
     for idx, var in pair_vars.items():
         if value(var) > 0.5:
-            selected_pairs.append(pair_data[idx])
+            selected_pairs.append(pair_data.iloc[idx])
     print(f"form_teams: selected_pairs={len(selected_pairs)}", flush=True)
 
     rows = []

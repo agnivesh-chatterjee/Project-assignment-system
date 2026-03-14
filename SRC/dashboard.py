@@ -1,14 +1,14 @@
-## dashboard.py
+## main.py
 import streamlit as st
 import requests
 import pandas as pd
-import os
+from pathlib import Path
 
 API = "https://project-assignment-system-2.onrender.com"
 
-# locate database folder safely
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "database")
+# locate repo root and database folder safely
+ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = ROOT / "database"
 
 st.set_page_config(page_title="Project–Student Matching Dashboard", layout="wide")
 
@@ -28,12 +28,11 @@ if menu == "Students":
     try:
         students = requests.get(f"{API}/students").json()
         df = pd.DataFrame(students)
-    except:
+    except Exception as e:
+        st.error(e)
         df = pd.DataFrame()
 
     st.dataframe(df, use_container_width=True)
-
-    # -------- REMOVE STUDENT --------
 
     st.subheader("Remove Student")
 
@@ -50,8 +49,6 @@ if menu == "Students":
 
             st.success("Student removed")
             st.rerun()
-
-    # -------- ADD STUDENT FORM --------
 
     st.subheader("Add Student")
 
@@ -134,12 +131,11 @@ elif menu == "Projects":
     try:
         projects = requests.get(f"{API}/projects").json()
         df = pd.DataFrame(projects)
-    except:
+    except Exception as e:
+        st.error(e)
         df = pd.DataFrame()
 
     st.dataframe(df, use_container_width=True)
-
-    # -------- REMOVE PROJECT --------
 
     st.subheader("Remove Project")
 
@@ -156,8 +152,6 @@ elif menu == "Projects":
 
             st.success("Project removed")
             st.rerun()
-
-    # -------- ADD PROJECT --------
 
     st.subheader("Add Project")
 
@@ -208,8 +202,7 @@ elif menu == "Match Scores":
     st.header("Compatibility Matrix")
 
     try:
-
-        scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
+        scores_path = DATA_DIR / "student_project_final_scores.csv"
         scores = pd.read_csv(scores_path)
 
         st.dataframe(
@@ -217,9 +210,9 @@ elif menu == "Match Scores":
             use_container_width=True
         )
 
-    except:
-
+    except Exception as e:
         st.warning("Compatibility scores not generated yet.")
+        st.write(e)
 
 
 # ---------------- TEAMS ----------------
@@ -229,15 +222,14 @@ elif menu == "Teams":
     st.header("Suggested Teams")
 
     try:
-
-        teams_path = os.path.join(DATA_DIR, "project_teams.csv")
+        teams_path = DATA_DIR / "project_teams.csv"
         teams = pd.read_csv(teams_path)
 
         st.dataframe(teams, use_container_width=True)
 
-    except:
-
+    except Exception as e:
         st.warning("Teams not generated yet.")
+        st.write(e)
 
     if st.button("Recompute Teams"):
 

@@ -1,8 +1,8 @@
 ## main.py
-from fastapi import FastAPI
 import pandas as pd
 from . import team_formation
 import os
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
@@ -44,8 +44,19 @@ def get_students():
 
 @app.post("/students")
 def add_student(student: dict):
-
     students = load_students()
+
+    incoming_name = str(student.get("name", "")).strip()
+
+    if incoming_name == "":
+        raise HTTPException(status_code=400, detail="Student name is required")
+
+    if not students.empty and "name" in students.columns:
+        existing_names = set(students["name"].astype(str).str.strip())
+        if incoming_name in existing_names:
+            raise HTTPException(status_code=400, detail="Student already exists")
+
+    student["name"] = incoming_name
 
     students = pd.concat(
         [students, pd.DataFrame([student])],
@@ -55,6 +66,7 @@ def add_student(student: dict):
     save_students(students)
 
     return {"status": "student added"}
+
 
 
 @app.delete("/students/{name}")

@@ -2,8 +2,13 @@
 import streamlit as st
 import requests
 import pandas as pd
+import os
 
 API = st.secrets.get("API_URL", "http://127.0.0.1:8000")
+
+# locate database folder safely
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "database")
 
 st.set_page_config(page_title="Project–Student Matching Dashboard", layout="wide")
 
@@ -71,7 +76,7 @@ if menu == "Students":
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            python = st.slider("Python",1,5)
+            python_skill = st.slider("Python",1,5)
             ml = st.slider("Machine Learning",1,5)
 
         with col2:
@@ -79,7 +84,7 @@ if menu == "Students":
             frontend = st.slider("Frontend",1,5)
 
         with col3:
-            data = st.slider("Data Analysis",1,5)
+            data_skill = st.slider("Data Analysis",1,5)
             systems = st.slider("Systems",1,5)
 
         with col4:
@@ -96,16 +101,16 @@ if menu == "Students":
 
         if submit:
 
-            data = {
+            payload = {
                 "name": name,
                 "college": college,
                 "resume_link": resume,
                 "github_link": github,
-                "python": python,
+                "python": python_skill,
                 "ml": ml,
                 "api": api,
                 "frontend": frontend,
-                "data": data,
+                "data": data_skill,
                 "systems": systems,
                 "viz": viz,
                 "devops": devops,
@@ -114,7 +119,7 @@ if menu == "Students":
                 "pref3": pref3
             }
 
-            requests.post(f"{API}/students", json=data)
+            requests.post(f"{API}/students", json=payload)
 
             st.success("Student added")
             st.rerun()
@@ -161,7 +166,7 @@ elif menu == "Projects":
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        python = st.slider("Python Weight",1,5)
+        python_weight = st.slider("Python Weight",1,5)
         ml = st.slider("ML Weight",1,5)
 
     with col2:
@@ -169,7 +174,7 @@ elif menu == "Projects":
         frontend = st.slider("Frontend Weight",1,5)
 
     with col3:
-        data = st.slider("Data Weight",1,5)
+        data_weight = st.slider("Data Weight",1,5)
         systems = st.slider("Systems Weight",1,5)
 
     with col4:
@@ -178,19 +183,19 @@ elif menu == "Projects":
 
     if st.button("Add Project"):
 
-        data = {
+        payload = {
             "project_name": project,
-            "Python": python,
+            "Python": python_weight,
             "ML": ml,
             "APIs": api,
             "Frontend": frontend,
-            "Data": data,
+            "Data": data_weight,
             "Systems": systems,
             "Viz": viz,
             "DevOps": devops
         }
 
-        requests.post(f"{API}/projects", json=data)
+        requests.post(f"{API}/projects", json=payload)
 
         st.success("Project added")
         st.rerun()
@@ -204,7 +209,8 @@ elif menu == "Match Scores":
 
     try:
 
-        scores = pd.read_csv("student_project_final_scores.csv")
+        scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
+        scores = pd.read_csv(scores_path)
 
         st.dataframe(
             scores.style.background_gradient(cmap="viridis"),
@@ -224,7 +230,8 @@ elif menu == "Teams":
 
     try:
 
-        teams = pd.read_csv("project_teams.csv")
+        teams_path = os.path.join(DATA_DIR, "project_teams.csv")
+        teams = pd.read_csv(teams_path)
 
         st.dataframe(teams, use_container_width=True)
 

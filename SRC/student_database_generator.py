@@ -1,6 +1,11 @@
 ## database generator
 import pandas as pd
 import random
+import os
+
+# Locate database folder
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "database")
 
 students = [
 
@@ -26,7 +31,6 @@ students = [
 "Pranav Pothan","Raja S","Riya Shyam Huddar","Sampriti Mahapatra",
 "Shreya Singh","Shruti Sharma","Shuvodeep Dutta","Srishti Lakhotia",
 "Tejaswi","Titli Chanda","Trishita Patra"
-
 ]
 
 projects = [
@@ -108,6 +112,8 @@ for s in students:
 
 df = pd.DataFrame(rows)
 
-df.to_csv("students.csv",index=False)
+# Save to database folder
+students_path = os.path.join(DATA_DIR, "students.csv")
+df.to_csv(students_path, index=False)
 
 print("students.csv generated")

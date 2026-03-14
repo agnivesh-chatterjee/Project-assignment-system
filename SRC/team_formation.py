@@ -27,7 +27,6 @@ OUTPUT_FILE = os.path.join(DATA_DIR, "project_teams.csv")
 # ============================================================
 
 def generate_scores():
-
     result = subprocess.run(
         [sys.executable, os.path.join(BASE_DIR, "SRC", "matchscore_generator.py")],
         capture_output=True,
@@ -39,7 +38,7 @@ def generate_scores():
     print(result.stderr)
 
     if result.returncode != 0:
-        raise RuntimeError("Match score generator failed")
+        raise RuntimeError(f"Match score generator failed: {result.stderr}")
 
 
 # ============================================================

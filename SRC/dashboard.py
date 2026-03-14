@@ -214,18 +214,18 @@ elif menu == "Match Scores":
     st.header("Compatibility Matrix")
 
     try:
-        scores_path = DATA_DIR / "student_project_final_scores.csv"
-        scores = pd.read_csv(scores_path)
+        scores = requests.get(f"{API}/scores")
+        scores.raise_for_status()
+        df = pd.DataFrame(scores.json())
 
         st.dataframe(
-            scores.style.background_gradient(cmap="viridis"),
+            df.style.background_gradient(cmap="viridis"),
             use_container_width=True
         )
 
     except Exception as e:
         st.warning("Compatibility scores not generated yet.")
         st.write(e)
-
 
 # ---------------- TEAMS ----------------
 
@@ -234,19 +234,12 @@ elif menu == "Teams":
     st.header("Suggested Teams")
 
     try:
-        teams_path = DATA_DIR / "project_teams.csv"
-        teams = pd.read_csv(teams_path)
+        teams = requests.get(f"{API}/teams")
+        teams.raise_for_status()
+        df = pd.DataFrame(teams.json())
 
-        st.dataframe(teams, use_container_width=True)
+        st.dataframe(df, use_container_width=True)
 
     except Exception as e:
         st.warning("Teams not generated yet.")
         st.write(e)
-
-    if st.button("Recompute Teams"):
-
-        requests.post(f"{API}/recompute")
-
-        st.success("Teams recomputed")
-
-        st.rerun()

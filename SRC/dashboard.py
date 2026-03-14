@@ -5,28 +5,52 @@ import pandas as pd
 API = "https://project-assignment-system-2.onrender.com"
 
 st.set_page_config(page_title="Project–Student Matching Dashboard", layout="wide")
-
 st.title("Project–Student Matching Dashboard")
+
+# ---------------- SAFE API CALL ----------------
+
+def api_get(endpoint):
+    try:
+        r = requests.get(f"{API}/{endpoint}", timeout=10)
+        if r.status_code == 200 and r.text:
+            return r.json()
+    except:
+        pass
+    return []
+
+def api_post(endpoint, payload=None):
+    try:
+        requests.post(f"{API}/{endpoint}", json=payload, timeout=20)
+    except:
+        pass
+
+def api_delete(endpoint):
+    try:
+        requests.delete(f"{API}/{endpoint}", timeout=10)
+    except:
+        pass
+
+# ---------------- MENU ----------------
 
 menu = st.sidebar.selectbox(
     "Navigation",
     ["Students","Projects","Match Scores","Teams"]
 )
 
-# ---------------- STUDENTS ----------------
+# ===============================
+# STUDENTS
+# ===============================
 
 if menu == "Students":
 
     st.header("Student Profiles")
 
-    try:
-        students = requests.get(f"{API}/students").json()
-        df = pd.DataFrame(students)
-    except Exception as e:
-        st.error(e)
-        df = pd.DataFrame()
+    students = api_get("students")
+    df = pd.DataFrame(students)
 
     st.dataframe(df, use_container_width=True)
+
+    # ---------- REMOVE STUDENT ----------
 
     st.subheader("Remove Student")
 
@@ -39,19 +63,17 @@ if menu == "Students":
 
         if st.button("Delete Student"):
 
-            requests.delete(f"{API}/students/{student_name}")
-            requests.post(f"{API}/recompute")
+            api_delete(f"students/{student_name}")
 
             st.success("Student removed")
             st.rerun()
 
+    # ---------- ADD STUDENT ----------
+
     st.subheader("Add Student")
 
-    try:
-        projects = requests.get(f"{API}/projects").json()
-        project_names = [p["project_name"] for p in projects]
-    except:
-        project_names = []
+    projects = api_get("projects")
+    project_names = [p["project_name"] for p in projects]
 
     with st.form("student_form"):
 
@@ -111,31 +133,25 @@ if menu == "Students":
                 "pref3": pref3
             }
 
-            requests.post(f"{API}/students", json=payload)
-            requests.post(f"{API}/recompute")
+            api_post("students", payload)
 
             st.success("Student added")
             st.rerun()
 
-
-# ---------------- PROJECTS ----------------
+# ===============================
+# PROJECTS
+# ===============================
 
 elif menu == "Projects":
 
     st.header("Projects")
 
-    try:
-        response = requests.get(f"{API}/projects")
-        if response.status_code == 200 and response.text:
-           projects = response.json()
-           df = pd.DataFrame(projects)
-        else:
-           df = pd.DataFrame()
-    except Exception as e:
-        st.error(e)
-        df = pd.DataFrame()
+    projects = api_get("projects")
+    df = pd.DataFrame(projects)
 
     st.dataframe(df, use_container_width=True)
+
+    # ---------- REMOVE PROJECT ----------
 
     st.subheader("Remove Project")
 
@@ -148,11 +164,12 @@ elif menu == "Projects":
 
         if st.button("Delete Project"):
 
-            requests.delete(f"{API}/projects/{project_name}")
-            requests.post(f"{API}/recompute")
+            api_delete(f"projects/{project_name}")
 
             st.success("Project removed")
             st.rerun()
+
+    # ---------- ADD PROJECT ----------
 
     st.subheader("Add Project")
 
@@ -190,57 +207,49 @@ elif menu == "Projects":
             "DevOps": devops
         }
 
-        requests.post(f"{API}/projects", json=payload)
-        requests.post(f"{API}/recompute")
+        api_post("projects", payload)
 
         st.success("Project added")
         st.rerun()
 
-
-# ---------------- MATCH SCORES ----------------
+# ===============================
+# MATCH SCORES
+# ===============================
 
 elif menu == "Match Scores":
 
     st.header("Compatibility Matrix")
 
-    try:
+    scores = api_get("scores")
+    df = pd.DataFrame(scores)
 
-        scores = requests.get(f"{API}/scores").json()
-        scores = pd.DataFrame(scores)
-
+    if df.empty:
+        st.warning("Compatibility scores not generated yet.")
+    else:
         st.dataframe(
-            scores.style.background_gradient(cmap="viridis"),
+            df.style.background_gradient(cmap="viridis"),
             use_container_width=True
         )
 
-    except Exception as e:
-
-        st.warning("Compatibility scores not generated yet.")
-        st.write(e)
-
-
-# ---------------- TEAMS ----------------
+# ===============================
+# TEAMS
+# ===============================
 
 elif menu == "Teams":
 
     st.header("Suggested Teams")
 
-    try:
+    teams = api_get("teams")
+    df = pd.DataFrame(teams)
 
-        teams = requests.get(f"{API}/teams").json()
-        teams = pd.DataFrame(teams)
-
-        st.dataframe(teams, use_container_width=True)
-
-    except Exception as e:
-
+    if df.empty:
         st.warning("Teams not generated yet.")
-        st.write(e)
+    else:
+        st.dataframe(df, use_container_width=True)
 
     if st.button("Recompute Teams"):
 
-        requests.post(f"{API}/recompute")
+        api_post("recompute")
 
         st.success("Teams recomputed")
-
         st.rerun()

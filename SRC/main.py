@@ -7,9 +7,9 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 app = FastAPI()
 
 recompute_state = {
-    "running":False,
-    "status":"idle",
-    "detail":""
+    "running": False,
+    "status": "idle",
+    "detail": ""
 }
 
 # ---------------- PATH SETUP ----------------
@@ -19,6 +19,8 @@ DATA_DIR = os.path.join(BASE_DIR, "database")
 
 students_path = os.path.join(DATA_DIR, "students.csv")
 projects_path = os.path.join(DATA_DIR, "projects.csv")
+scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
+teams_path = os.path.join(DATA_DIR, "project_teams.csv")
 
 
 # ---------------- HELPER FUNCTIONS ----------------
@@ -39,6 +41,21 @@ def load_projects():
 def save_projects(df):
     df.to_csv(projects_path, index=False)
 
+def load_scores():
+    if os.path.exists(scores_path):
+        return pd.read_csv(scores_path)
+    return pd.DataFrame()
+
+def load_teams():
+    if not os.path.exists(teams_path):
+        return pd.DataFrame()
+
+    try:
+        return pd.read_csv(teams_path)
+    except Exception as e:
+        print("Failed to read project_teams.csv:", e, flush=True)
+        return pd.DataFrame()
+
 
 # ---------------- STUDENTS ----------------
 
@@ -50,6 +67,7 @@ def get_students():
 
 @app.post("/students")
 def add_student(student: dict):
+
     students = load_students()
 
     incoming_name = str(student.get("name", "")).strip()
@@ -72,7 +90,6 @@ def add_student(student: dict):
     save_students(students)
 
     return {"status": "student added"}
-
 
 
 @app.delete("/students/{name}")
@@ -125,63 +142,66 @@ def delete_project(project_name: str):
 
 
 # ---------------- TEAM RECOMPUTE ----------------
+
 def _run_recompute_task():
+
     import traceback
+
     recompute_state["running"] = True
     recompute_state["status"] = "running"
     recompute_state["detail"] = ""
 
-    print("=== RECOMPUTEBACKGROUND START ===",flush=True)
+    print("=== RECOMPUTE BACKGROUND START ===", flush=True)
 
     try:
+
         result = team_formation.form_teams()
+
+        if not os.path.exists(teams_path):
+            raise RuntimeError("project_teams.csv was not created")
+
         recompute_state["running"] = False
         recompute_state["status"] = "success"
         recompute_state["detail"] = (
             f"Teams recomputed successfully. "
             f"Rows written: {0 if result is None else len(result)}"
         )
-        print("=== RECOMPUTE BACKGROUND SUCCESS ===",flush=True)
+
+        print("=== RECOMPUTE BACKGROUND SUCCESS ===", flush=True)
+
     except Exception as e:
+
         recompute_state["running"] = False
         recompute_state["status"] = "failed"
         recompute_state["detail"] = str(e)
-        print("=== RECOMPUTE BACKGROUND FAILED ===",flush=True)
-        print(traceback.format_exc(),flush=True)
-        
+
+        print("=== RECOMPUTE BACKGROUND FAILED ===", flush=True)
+        print(traceback.format_exc(), flush=True)
+
+
 @app.post("/recompute")
-def recompute(background_tasks:BackgroundTasks):
+def recompute(background_tasks: BackgroundTasks):
+
     if recompute_state["running"]:
         return {
-            "status":"already_running",
-            "detail":"Recompute is already in progress."
+            "status": "already_running",
+            "detail": "Recompute is already in progress."
         }
+
     background_tasks.add_task(_run_recompute_task)
+
     return {
-        "status" : "started",
-        "detail" : "Recompute started in background."
+        "status": "started",
+        "detail": "Recompute started in background."
     }
+
 
 @app.get("/recompute-status")
 def get_recompute_status():
     return recompute_state
 
-scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
-teams_path = os.path.join(DATA_DIR, "project_teams.csv")
 
-def load_scores():
-    if os.path.exists(scores_path):
-        return pd.read_csv(scores_path)
-    return pd.DataFrame()
-
-def load_teams():
-    if os.path.exists(teams_path):
-        try:
-            return pd.read_csv(teams_path)
-        except Exception:
-            return pd.DataFrame()
-    return pd.DataFrame()
-
+# ---------------- SCORES ----------------
 
 @app.get("/scores")
 def get_scores():
@@ -189,17 +209,44 @@ def get_scores():
         team_formation.generate_scores()
         scores = load_scores()
         return scores.to_dict(orient="records")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate scores: {e}")
 
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate scores: {e}"
+        )
+
+
+# ---------------- TEAMS ----------------
 
 @app.get("/teams")
 def get_teams():
+
     try:
+
+        # If recompute is still running
+        if recompute_state["running"]:
+            return {
+                "status": "recomputing",
+                "teams": []
+            }
+
         teams = load_teams()
+
         if teams.empty:
-            return []
-            
-        return teams.to_dict(orient="records")
+            return {
+                "status": "no_teams",
+                "teams": []
+            }
+
+        return {
+            "status": "success",
+            "teams": teams.to_dict(orient="records")
+        }
+
     except Exception as e:
-        raise HTTPException(status_code=500,detail=f"Failed to load teams:{e}")
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load teams: {e}"
+        )

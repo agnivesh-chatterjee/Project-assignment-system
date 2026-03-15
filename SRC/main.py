@@ -214,25 +214,24 @@ def get_teams():
 
     try:
 
-        # If recompute running return empty list (prevents UI crash)
-        if recompute_state["running"]:
+        if not os.path.exists(teams_path):
             return []
 
-        teams = load_teams()
+        try:
+            teams = pd.read_csv(teams_path)
+        except Exception as e:
+            print("CSV read failed:", e, flush=True)
+            return []
 
         if teams.empty:
             return []
 
-        # ensure clean column names
         teams.columns = teams.columns.str.strip()
 
         return teams.to_dict(orient="records")
 
     except Exception as e:
 
-        print("Teams endpoint failure:", e, flush=True)
+        print("Teams endpoint error:", e, flush=True)
 
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to load teams: {e}"
-        )
+        return []

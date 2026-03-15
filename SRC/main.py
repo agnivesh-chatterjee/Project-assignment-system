@@ -2,9 +2,15 @@
 import pandas as pd
 from . import team_formation
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 
 app = FastAPI()
+
+recompute_state = {
+    "running":False,
+    "status":"idle",
+    "detail":""
+}
 
 # ---------------- PATH SETUP ----------------
 
@@ -119,25 +125,46 @@ def delete_project(project_name: str):
 
 
 # ---------------- TEAM RECOMPUTE ----------------
-
-@app.post("/recompute")
-def recompute():
+def _run_recompute_task():
     import traceback
+    recompute_state["running"] = True
+    recompute_state["status"] = "running"
+    recompute_state["detail"] = ""
 
-    print("=== RECOMPUTE START ===", flush=True)
+    print("=== RECOMPUTEBACKGROUND START ===",flush=True)
 
     try:
         result = team_formation.form_teams()
-        print("=== RECOMPUTE SUCCESS ===", flush=True)
-        return {
-            "status": "teams recomputed",
-            "rows_written": 0 if result is None else len(result)
-        }
-
+        recompute_state["running"] = False
+        recompute_state["status"] = "success"
+        recompute_state["detail"] = (
+            f"Teams recomputed successfully. "
+            f"Rows written: {0 if result is None else len(result)}"
+        )
+        print("=== RECOMPUTE BACKGROUND SUCCESS ===",flush=True)
     except Exception as e:
-        print("=== RECOMPUTE FAILED ===", flush=True)
-        print(traceback.format_exc(), flush=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        recompute_state["running"] = False
+        recompute_state["status"] = "failed"
+        recompute_state["detail"] = str(e)
+        print("=== RECOMPUTE BACKGROUND FAILED ===",flush=True)
+        print(traceback.format_exc(),flush=True)
+        
+@app.post("/recompute")
+def recompute(background_tasks:BackgroundTasks):
+    if recompute_state["running"]:
+        return {
+            "status":"already_running",
+            "detail":"Recompute is already in progress."
+        }
+    background_tasks.add_task(_run_recompute_task)
+    return {
+        "status" : "started",
+        "detail" : "Recompute started in background."
+    }
+
+@app.get("/recompute-status")
+def get_recompute_status():
+    return recompute_state
 
 scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
 teams_path = os.path.join(DATA_DIR, "project_teams.csv")

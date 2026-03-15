@@ -51,6 +51,9 @@ def generate_scores():
 
 def form_teams():
 
+    PAIR_ASSIGN_BONUS = 10
+    SINGLE_PENALTY = 1000
+
     print("form_teams: entered", flush=True)
 
     # Step 1: generate latest scores
@@ -233,7 +236,7 @@ def form_teams():
             single_data.append({
                 "student":s,
                 "project":p,
-                "final_score":score_lookup[(s,p)]})
+                "final_score":score_lookup[(s,p)] - SINGLE_PENALTY})
 
     single_data = pd.DataFrame(single_data)
 
@@ -245,6 +248,17 @@ def form_teams():
         .reset_index(drop=True)
     )
             
+    students_in_pairs = set(pair_data["s1"]).union(set(pair_data["s2"]))
+    missing_students = [s for s in students if s not in students_in_pairs]
+    if missing_students:
+        print(f"Adding fallback singles for:{missing_students}",flush=True)
+    for s in missing_students:
+        best_project = max(projects,key=lambda p:score_lookup[(s,p)])
+        single_data.append({
+            "student":s,
+            "project":best_project,
+            "final_score": score_lookup[(s,best_project)]
+        })
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
     print("form_teams: model built", flush=True)
 
@@ -256,8 +270,6 @@ def form_teams():
     for idx, row in single_data.iterrows():
         single_vars[idx] = LpVariable(f"single_{idx}", cat=LpBinary)
 
-    PAIR_ASSIGN_BONUS = 10
-    SINGLE_PENALTY = 1000
     model += lpSum((row["final_score"]+PAIR_ASSIGN_BONUS) * pair_vars[idx] for idx, row in pair_data.iterrows()) + lpSum((row["final_score"]-SINGLE_PENALTY) * single_vars[idx] for idx, row in single_data.iterrows())
 
        # Each student can appear in exactly one selected team

@@ -289,7 +289,7 @@ def form_teams():
         model += lpSum(pair_terms + single_terms) <= 1, f"project_once_{p}"
 
     print("form_teams: starting solver", flush=True)
-    status = model.solve(PULP_CBC_CMD(msg = False,timeLimit=30))
+    status = model.solve(PULP_CBC_CMD(msg = False))
     print(f"form_teams: solver finished with status={LpStatus[status]}", flush=True)
     status_str = LpStatus[status]
     if status_str != "Optimal":
@@ -323,7 +323,7 @@ def form_teams():
         })
 
     output_df = pd.DataFrame(rows)
-    output_df = output_df.sort_values(by="Project Name")
+    output_df = output_df.sort_values(by="Project Name").reset_index(drop=True)
 
     # Hard validation: no duplicate projects, no duplicate students
     if output_df["Project Name"].duplicated().any():
@@ -350,7 +350,6 @@ def form_teams():
     print(f"Output written to: {OUTPUT_FILE}",flush=True)
 
     return output_df
-
 
 if __name__ == "__main__":
     form_teams()

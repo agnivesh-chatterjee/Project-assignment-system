@@ -4,13 +4,4 @@ fastapi
 uvicorn
 requests
 pulp
-pathlib
 matplotlib
-requests
-os
-time
-random
-sys
-itertools
-subprocess
-math

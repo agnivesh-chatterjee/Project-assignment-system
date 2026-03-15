@@ -19,7 +19,8 @@ st.title("Project–Student Matching Dashboard")
 
 menu = st.sidebar.selectbox(
     "Navigation",
-    ["Students","Projects","Match Scores","Teams"]
+    ["Students", "Projects", "Match Scores", "Teams"],
+    key="main_menu"
 )
 
 # ---------------- STUDENTS ----------------
@@ -290,10 +291,6 @@ elif menu == "Teams":
         if recompute_info.get("status") == "failed":
             st.error(f"Recompute failed:{recompute_info.get('detail','Unknown error')}")
             st.stop()
-        #AUTO REFRESH WHEN DONE
-        if recompute_info.get("status") == "success":
-            st.success("Teams ready. Reloading...")
-            st.rerun()
     except Exception as e:
         st.warning("Could not fetch recompute status:")
         st.write(e)

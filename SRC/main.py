@@ -47,7 +47,8 @@ def save_students(df):
 @app.get("/students")
 def get_students():
     students = load_students()
-    return students.to_dict(orient="records")
+    students = students.fillna("").to_dict(orient="records")
+    return students
 
 
 @app.post("/students")
@@ -100,7 +101,8 @@ def save_projects(df):
 @app.get("/projects")
 def get_projects():
     projects = load_projects()
-    return projects.to_dict(orient="records")
+    projects = projects.fillna("").to_dict(orient="records")
+    return projects
 
 
 @app.post("/projects")
@@ -141,7 +143,8 @@ def get_scores():
     try:
         team_formation.generate_scores()
         scores = load_scores()
-        return scores.to_dict(orient="records")
+        scores = scores.fillna("").to_dict(orient="records")
+        return scores
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -227,8 +230,8 @@ def get_teams():
             return []
 
         teams.columns = teams.columns.str.strip()
-
-        return teams.to_dict(orient="records")
+        teams = teams.fillna("").to_dict(orient="records")
+        return teams
 
     except Exception as e:
 

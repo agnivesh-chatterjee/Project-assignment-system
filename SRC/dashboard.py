@@ -283,6 +283,10 @@ elif menu == "Teams":
         st.write(f"Recompute status:{recompute_info.get('status','unknown')}")
         if recompute_info.get("detail"):
             st.write(recompute_info["detail"])
+        #AUTO REFRESH WHEN DONE
+        if recompute_info.get("status") == "success":
+            st.success("Teams ready. Reloading...")
+            st.rerun()
     except Exception as e:
         st.warning("Teams not generated yet:")
         st.write(e)
@@ -296,5 +300,5 @@ elif menu == "Teams":
         st.dataframe(df, use_container_width=True)
 
     except Exception as e:
-        st.warning("Teams not generated yet.")
+        st.error("Failed to loead teams.")
         st.write(e)

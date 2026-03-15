@@ -286,6 +286,10 @@ elif menu == "Teams":
         st.write(f"Recompute status:{recompute_info.get('status','unknown')}")
         if recompute_info.get("detail"):
             st.write(recompute_info["detail"])
+            
+        if recompute_info.get("status") == "failed":
+            st.error(f"Recompute failed:{recompute_info.get('detail','Unknown error')}")
+            st.stop()
         #AUTO REFRESH WHEN DONE
         if recompute_info.get("status") == "success":
             st.success("Teams ready. Reloading...")

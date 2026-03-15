@@ -6,7 +6,7 @@ from pathlib import Path
 import os
 import time
 
-API = os.getenv("API_BASE_URL", "https://project-assignment-system-krrk.onrender.com")
+API = os.getenv("API_BASE_URL", "https://project-assignment-system-2.onrender.com")
 
 
 # locate repo root and database folder safely

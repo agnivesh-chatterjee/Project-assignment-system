@@ -317,7 +317,9 @@ def form_teams():
     output_df = pd.DataFrame(rows)
     output_df = output_df.sort_values(by="Project Name")
 
+    temp_output = OUTPUT_FILE + ".tmp"
     output_df.to_csv(OUTPUT_FILE, index=False)
+    os.replace(temp_output,OUTPUT_FILE)
 
     print(f"Output written to: {OUTPUT_FILE}",flush=True)
 

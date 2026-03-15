@@ -208,7 +208,7 @@ def form_teams():
     student_pairs = list(itertools.combinations(students, 2))
 
     pair_data = []
-    top_students_per_project = 30
+    top_students_per_project = 20
     for p in projects:
         project_scores = [(s,score_lookup[(s,p)]) for s in students]
         project_scores.sort(key=lambda x: x[1],reverse=True)
@@ -241,6 +241,14 @@ def form_teams():
                 "final_score":score_lookup[(s,p)]})
 
     single_data = pd.DataFrame(single_data)
+
+    single_data = (
+        single_data
+        .sort_values(["project","final_score"],ascending=[True,False])
+        .groupby("project",group_keys=False)
+        .head(30)
+        .reset_index(drop=True)
+    )
             
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
     print("form_teams: model built", flush=True)
@@ -281,7 +289,7 @@ def form_teams():
         model += lpSum(terms) <= 1
 
     print("form_teams: starting solver", flush=True)
-    status = model.solve()
+    status = model.solve(PULP_CBC_CMD(timeLimit=30))
     print(f"form_teams: solver finished with status={LpStatus[status]}", flush=True)
 
     selected_pairs = []

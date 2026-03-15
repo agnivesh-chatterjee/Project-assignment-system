@@ -18,7 +18,18 @@ students = [
 "Rajveer Singh","Rushikesh Vishwasrao","Sagnik Chowdhury","Saksham Dheer Singh",
 "Sambit Ranjan Rout","Sania Rawat","Shaumik Khanna","Shreyasi Kar",
 "Shreya Singhee","Snehash Kumar Behera","Sombit Mazumder","Sourit Mitra",
-"Swikriti Paul","Urjaswi Chakraborty"
+"Swikriti Paul","Urjaswi Chakraborty",
+"Abhinav Malik","Abhishek Harshadbhai Lunagariya","Abhishek Singh",
+"Ahana Biswas","Ahana Mondal","Aman Raj","Anirban Chatterjee",
+"Anushka Chakraborty","Arnab Bera","Ayushman Anupam","Biswajit Kala",
+"Boda Surya Venkata Jyothi Sowmya","Chinmay Shailesh Nandan","Debanjan Das",
+"Deepanshi","Devesh Kailash Bajaj","Dhruv singla","Hanani Bathina",
+"Hinge Aniket Shriram","Jugaad Singh Sohal","Ketaki Tushar Sahasrabudhe",
+"Manami Das","Maria Paul Thurkadayil","Mohit Singh Sinsniwal",
+"Nalla Janardhana Rao","Nisith Ranjan Hazra","Parejiya Poojan Shaileshbhai",
+"Pranav Pothan","Raja S","Riya Shyam Huddar","Sampriti Mahapatra",
+"Shreya Singh","Shruti Sharma","Shuvodeep Dutta","Srishti Lakhotia",
+"Tejaswi","Titli Chanda","Trishita Patra"
 ]
 
 projects = [

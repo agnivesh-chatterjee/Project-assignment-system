@@ -241,18 +241,9 @@ def form_teams():
                 "final_score":score_lookup[(s,p)]})
 
     single_data = pd.DataFrame(single_data)
-    single_data = (
-        single_data
-        .sort_values(["project","final_score"],ascending=[True,False])
-        .groupby("project",group_keys=False)
-        .head(20)
-        .reset_index(drop=True)
-    )
-    
             
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
     print("form_teams: model built", flush=True)
-
 
     pair_vars = {}
     for idx, row in pair_data.iterrows():
@@ -262,9 +253,9 @@ def form_teams():
     for idx, row in single_data.iterrows():
         single_vars[idx] = LpVariable(f"single_{idx}", cat=LpBinary)
 
-    PAIR_ASSIGN_BONUS = 5
-    SINGLE_ASSIGN_BONUS = 2
-    model += lpSum((row["final_score"]+PAIR_ASSIGN_BONUS) * pair_vars[idx] for idx, row in pair_data.iterrows()) + lpSum((row["final_score"]+SINGLE_ASSIGN_BONUS) * single_vars[idx] for idx, row in single_data.iterrows())
+    PAIR_ASSIGN_BONUS = 10
+    SINGLE_PENALTY = 1000
+    model += lpSum((row["final_score"]+PAIR_ASSIGN_BONUS) * pair_vars[idx] for idx, row in pair_data.iterrows()) + lpSum((row["final_score"]-SINGLE_PENALTY) * single_vars[idx] for idx, row in single_data.iterrows())
 
     for s in students:
         terms = []
@@ -272,11 +263,11 @@ def form_teams():
             if row["s1"] == s or row["s2"] == s:
                 terms.append(pair_vars[idx])
 
-         for idx, row in single_data.iterrows():
+        for idx, row in single_data.iterrows():
             if row["student"] == s:
                 terms.append(single_vars[idx])
                 
-        model += lpSum(terms) <= 1
+        model += lpSum(terms) == 1
 
     for p in projects:
         terms = []

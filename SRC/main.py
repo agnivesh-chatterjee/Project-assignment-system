@@ -1,4 +1,3 @@
-## main.py
 import pandas as pd
 from . import team_formation
 import os
@@ -23,41 +22,27 @@ scores_path = os.path.join(DATA_DIR, "student_project_final_scores.csv")
 teams_path = os.path.join(DATA_DIR, "project_teams.csv")
 
 
-# ---------------- HELPER FUNCTIONS ----------------
+# ---------------- SAFE CSV READ ----------------
 
-def load_students():
-    if os.path.exists(students_path):
-        return pd.read_csv(students_path)
-    return pd.DataFrame()
-
-def save_students(df):
-    df.to_csv(students_path, index=False)
-
-def load_projects():
-    if os.path.exists(projects_path):
-        return pd.read_csv(projects_path)
-    return pd.DataFrame()
-
-def save_projects(df):
-    df.to_csv(projects_path, index=False)
-
-def load_scores():
-    if os.path.exists(scores_path):
-        return pd.read_csv(scores_path)
-    return pd.DataFrame()
-
-def load_teams():
-    if not os.path.exists(teams_path):
+def safe_read_csv(path):
+    if not os.path.exists(path):
         return pd.DataFrame()
 
     try:
-        return pd.read_csv(teams_path)
+        return pd.read_csv(path)
     except Exception as e:
-        print("Failed to read project_teams.csv:", e, flush=True)
+        print(f"Failed reading {path}: {e}", flush=True)
         return pd.DataFrame()
 
 
 # ---------------- STUDENTS ----------------
+
+def load_students():
+    return safe_read_csv(students_path)
+
+def save_students(df):
+    df.to_csv(students_path, index=False)
+
 
 @app.get("/students")
 def get_students():
@@ -76,8 +61,8 @@ def add_student(student: dict):
         raise HTTPException(status_code=400, detail="Student name is required")
 
     if not students.empty and "name" in students.columns:
-        existing_names = set(students["name"].astype(str).str.strip())
-        if incoming_name in existing_names:
+        existing = set(students["name"].astype(str).str.strip())
+        if incoming_name in existing:
             raise HTTPException(status_code=400, detail="Student already exists")
 
     student["name"] = incoming_name
@@ -96,7 +81,6 @@ def add_student(student: dict):
 def delete_student(name: str):
 
     students = load_students()
-
     students = students[students["name"] != name]
 
     save_students(students)
@@ -106,11 +90,16 @@ def delete_student(name: str):
 
 # ---------------- PROJECTS ----------------
 
+def load_projects():
+    return safe_read_csv(projects_path)
+
+def save_projects(df):
+    df.to_csv(projects_path, index=False)
+
+
 @app.get("/projects")
 def get_projects():
-
     projects = load_projects()
-
     return projects.to_dict(orient="records")
 
 
@@ -141,6 +130,22 @@ def delete_project(project_name: str):
     return {"status": "project removed"}
 
 
+# ---------------- SCORES ----------------
+
+def load_scores():
+    return safe_read_csv(scores_path)
+
+
+@app.get("/scores")
+def get_scores():
+    try:
+        team_formation.generate_scores()
+        scores = load_scores()
+        return scores.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ---------------- TEAM RECOMPUTE ----------------
 
 def _run_recompute_task():
@@ -158,16 +163,13 @@ def _run_recompute_task():
         result = team_formation.form_teams()
 
         if not os.path.exists(teams_path):
-            raise RuntimeError("project_teams.csv was not created")
+            raise RuntimeError("project_teams.csv not created")
 
         recompute_state["running"] = False
         recompute_state["status"] = "success"
-        recompute_state["detail"] = (
-            f"Teams recomputed successfully. "
-            f"Rows written: {0 if result is None else len(result)}"
-        )
+        recompute_state["detail"] = f"Teams recomputed successfully. Rows written: {len(result)}"
 
-        print("=== RECOMPUTE BACKGROUND SUCCESS ===", flush=True)
+        print("=== RECOMPUTE SUCCESS ===", flush=True)
 
     except Exception as e:
 
@@ -175,7 +177,7 @@ def _run_recompute_task():
         recompute_state["status"] = "failed"
         recompute_state["detail"] = str(e)
 
-        print("=== RECOMPUTE BACKGROUND FAILED ===", flush=True)
+        print("=== RECOMPUTE FAILED ===", flush=True)
         print(traceback.format_exc(), flush=True)
 
 
@@ -185,14 +187,14 @@ def recompute(background_tasks: BackgroundTasks):
     if recompute_state["running"]:
         return {
             "status": "already_running",
-            "detail": "Recompute is already in progress."
+            "detail": "Recompute already running"
         }
 
     background_tasks.add_task(_run_recompute_task)
 
     return {
         "status": "started",
-        "detail": "Recompute started in background."
+        "detail": "Recompute started"
     }
 
 
@@ -201,50 +203,34 @@ def get_recompute_status():
     return recompute_state
 
 
-# ---------------- SCORES ----------------
-
-@app.get("/scores")
-def get_scores():
-    try:
-        team_formation.generate_scores()
-        scores = load_scores()
-        return scores.to_dict(orient="records")
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate scores: {e}"
-        )
-
-
 # ---------------- TEAMS ----------------
+
+def load_teams():
+    return safe_read_csv(teams_path)
+
 
 @app.get("/teams")
 def get_teams():
 
     try:
 
-        # If recompute is still running
+        # If recompute running return empty list (prevents UI crash)
         if recompute_state["running"]:
-            return {
-                "status": "recomputing",
-                "teams": []
-            }
+            return []
 
         teams = load_teams()
 
         if teams.empty:
-            return {
-                "status": "no_teams",
-                "teams": []
-            }
+            return []
 
-        return {
-            "status": "success",
-            "teams": teams.to_dict(orient="records")
-        }
+        # ensure clean column names
+        teams.columns = teams.columns.str.strip()
+
+        return teams.to_dict(orient="records")
 
     except Exception as e:
+
+        print("Teams endpoint failure:", e, flush=True)
 
         raise HTTPException(
             status_code=500,

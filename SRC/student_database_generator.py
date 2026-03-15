@@ -31,6 +31,7 @@ students = [
 "Shreya Singh","Shruti Sharma","Shuvodeep Dutta","Srishti Lakhotia",
 "Tejaswi","Titli Chanda","Trishita Patra"
 ]
+
 projects = [
 "Real-Time Flight Tracker",
 "Global Ship Radar – Strait of Hormuz & Arabian Sea",
@@ -84,6 +85,13 @@ projects = [
 "Real-Time Log Analytics Platform"
 ]
 
+# -------------------------------------------------------------
+# LIMIT DATASET SIZE (IMPORTANT FOR SOLVER PERFORMANCE)
+# -------------------------------------------------------------
+
+students = students[:20]
+projects = projects[:20]
+
 rows = []
 
 for s in students:
@@ -114,4 +122,4 @@ df = pd.DataFrame(rows)
 students_path = os.path.join(DATA_DIR, "students.csv")
 df.to_csv(students_path, index=False)
 
-print("students.csv generated")
+print("students.csv generated (20 students)")

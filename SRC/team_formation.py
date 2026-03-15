@@ -208,7 +208,7 @@ def form_teams():
     student_pairs = list(itertools.combinations(students, 2))
 
     pair_data = []
-    top_students_per_project = 20
+    top_students_per_project = 15
     for p in projects:
         project_scores = [(s,score_lookup[(s,p)]) for s in students]
         project_scores.sort(key=lambda x: x[1],reverse=True)

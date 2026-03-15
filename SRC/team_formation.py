@@ -1,8 +1,9 @@
-# team_formation.py
+## team formation
 import pandas as pd
 import subprocess
 import itertools
 import os
+import sys
 from pulp import (
     LpProblem, LpMaximize, LpVariable, lpSum, LpBinary,
     PULP_CBC_CMD, value, LpStatus
@@ -26,18 +27,22 @@ OUTPUT_FILE = os.path.join(DATA_DIR, "project_teams.csv")
 # ============================================================
 
 def generate_scores():
-
     result = subprocess.run(
-        ["python", os.path.join(BASE_DIR, "SRC", "matchscore_generator.py")],
+        [sys.executable, os.path.join(BASE_DIR, "SRC", "matchscore_generator.py")],
         capture_output=True,
-        text=True
+        text=True,
+        cwd=BASE_DIR
     )
 
+    print("generate_scores: subprocess finished", flush=True)
+    print("generate_scores stdout:", result.stdout, flush=True)
+    print("generate_scores stderr:", result.stderr, flush=True)
+    print(f"generate_scores returncode: {result.returncode}", flush=True)
     print(result.stdout)
     print(result.stderr)
 
     if result.returncode != 0:
-        raise RuntimeError("Match score generator failed")
+        raise RuntimeError(f"Match score generator failed: {result.stderr}")
 
 
 # ============================================================
@@ -46,12 +51,23 @@ def generate_scores():
 
 def form_teams():
 
+    print("form_teams: entered", flush=True)
+
     # Step 1: generate latest scores
     generate_scores()
+
+    print("form_teams: scores generated", flush=True)
+    # ============================================================
+    # CONFIG
+    # ============================================================
 
     ALLOW_SINGLE_MEMBER_TEAMS = False
     COMPLEMENTARITY_WEIGHT = 0.15
     SOLVER_MSG = False
+
+    # ============================================================
+    # HELPERS
+    # ============================================================
 
     SKILL_MAP_STUDENTS = {
         "python": "python",
@@ -108,10 +124,14 @@ def form_teams():
     # LOAD DATA
     # ============================================================
 
+    print("form_teams: reading csv files", flush=True)
+
     scores_df = pd.read_csv(SCORES_FILE)
     students_df = pd.read_csv(STUDENTS_FILE)
     projects_df = pd.read_csv(PROJECTS_FILE)
 
+    print("form_teams: csv files loaded", flush=True)
+    
     scores_df = normalize_columns(scores_df)
     students_df = normalize_columns(students_df)
     projects_df = normalize_columns(projects_df)
@@ -150,6 +170,9 @@ def form_teams():
     students = sorted(scores_df["student"].unique().tolist())
     projects = sorted(projects_df["project_name"].unique().tolist())
 
+    print(f"form_teams: students={len(students)}, projects={len(projects)}", flush=True)
+
+
     if len(students) == 0:
         raise ValueError("No valid students found after merging files.")
     if len(projects) == 0:
@@ -163,6 +186,16 @@ def form_teams():
     for _, row in scores_df.iterrows():
         score_lookup[(row["student"], row["project"])] = float(row["final_score"])
 
+    student_skill = {}
+    for _, row in students_df.iterrows():
+        name = str(row["name"])
+        student_skill[name] = {s: float(row[s]) if s in row.index else 0.0 for s in SKILLS}
+
+    project_weight = {}
+    for _, row in projects_df.iterrows():
+        pname = str(row["project_name"])
+        project_weight[pname] = {s: float(row[s]) if s in row.index else 0.0 for s in SKILLS}
+
     for s in students:
         for p in projects:
             if (s, p) not in score_lookup:
@@ -175,8 +208,12 @@ def form_teams():
     student_pairs = list(itertools.combinations(students, 2))
 
     pair_data = []
-    for s1, s2 in student_pairs:
-        for p in projects:
+    top_students_per_project = 15
+    for p in projects:
+        project_scores = [(s,score_lookup[(s,p)]) for s in students]
+        project_scores.sort(key=lambda x: x[1],reverse=True)
+        top_students = [s for s,_ in project_scores[:top_students_per_project]]
+        for s1,s2 in itertools.combinations(top_students,2):
             final_score = score_lookup[(s1, p)] + score_lookup[(s2, p)]
             pair_data.append({
                 "s1": s1,
@@ -184,72 +221,83 @@ def form_teams():
                 "project": p,
                 "final_score": final_score
             })
+    print(f"form_teams: pair_data rows before dataframe={len(pair_data)}", flush=True)
+    pair_data = pd.DataFrame(pair_data).reset_index(drop=True)
+    print(f"form_teams: pair_data rows after dataframe={len(pair_data)}", flush=True)
 
+    #-------------Single assignments-------------------------------------------------------------------
+    single_data = []
+
+    for s in students:
+        for p in projects:
+            single_data.append({
+                "student":s,
+                "project":p,
+                "final_score":score_lookup[(s,p)]})
+
+    single_data = pd.DataFrame(single_data)
+
+    single_data = (
+        single_data
+        .sort_values(["project","final_score"],ascending=[True,False])
+        .groupby("project",group_keys=False)
+        .head(30)
+        .reset_index(drop=True)
+    )
+            
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
+    print("form_teams: model built", flush=True)
 
     pair_vars = {}
-    for idx, row in enumerate(pair_data):
+    for idx, row in pair_data.iterrows():
         pair_vars[idx] = LpVariable(f"pair_{idx}", cat=LpBinary)
 
-    model += lpSum(row["final_score"] * pair_vars[idx] for idx, row in enumerate(pair_data))
+    single_vars = {}
+    for idx, row in single_data.iterrows():
+        single_vars[idx] = LpVariable(f"single_{idx}", cat=LpBinary)
+
+    PAIR_ASSIGN_BONUS = 10
+    SINGLE_PENALTY = 1000
+    model += lpSum((row["final_score"]+PAIR_ASSIGN_BONUS) * pair_vars[idx] for idx, row in pair_data.iterrows()) + lpSum((row["final_score"]-SINGLE_PENALTY) * single_vars[idx] for idx, row in single_data.iterrows())
 
     for s in students:
         terms = []
-        for idx, row in enumerate(pair_data):
+        for idx, row in pair_data.iterrows():
             if row["s1"] == s or row["s2"] == s:
                 terms.append(pair_vars[idx])
-        model += lpSum(terms) <= 1
+
+        for idx, row in single_data.iterrows():
+            if row["student"] == s:
+                terms.append(single_vars[idx])
+                
+        model += lpSum(terms) == 1
 
     for p in projects:
-        terms = [pair_vars[idx] for idx, row in enumerate(pair_data) if row["project"] == p]
+        terms = []
+        for idx, row in pair_data.iterrows():
+            if row["project"] == p:
+                terms.append(pair_vars[idx])
+
+        for idx, row in single_data.iterrows():
+            if row["project"] == p:
+                terms.append(single_vars[idx])
         model += lpSum(terms) <= 1
 
-    model.solve(PULP_CBC_CMD(msg=SOLVER_MSG))
+    print("form_teams: starting solver", flush=True)
+    status = model.solve(PULP_CBC_CMD(msg = False,timeLimit=30))
+    print(f"form_teams: solver finished with status={LpStatus[status]}", flush=True)
 
     selected_pairs = []
     for idx, var in pair_vars.items():
         if value(var) > 0.5:
-            selected_pairs.append(pair_data[idx])
+            selected_pairs.append(pair_data.iloc[idx])
 
-    # ============================================================
-    # HANDLE ODD NUMBER OF STUDENTS
-    # ============================================================
-
-    assigned_students = set()
-
-    for pair in selected_pairs:
-        assigned_students.add(pair["s1"])
-        assigned_students.add(pair["s2"])
-
-    unassigned_students = [s for s in students if s not in assigned_students]
-
-    used_projects = {pair["project"] for pair in selected_pairs}
-
-    for student in unassigned_students:
-
-        best_project = max(
-            projects,
-            key=lambda p: score_lookup.get((student, p), 0)
-        )
-
-        if best_project in used_projects:
-            for p in projects:
-                if p not in used_projects:
-                    best_project = p
-                    break
-
-        selected_pairs.append({
-            "s1": student,
-            "s2": "",
-            "project": best_project,
-            "final_score": score_lookup.get((student, best_project), 0)
-        })
-
-        used_projects.add(best_project)
-
-    # ============================================================
-    # OUTPUT
-    # ============================================================
+    selected_singles = []
+    for idx, var in single_vars.items():
+        if value(var) > 0.5:
+            selected_singles.append(single_data.iloc[idx])
+    
+    print(f"form_teams: selected_pairs={len(selected_pairs)}", flush=True)
 
     rows = []
     for row in selected_pairs:
@@ -259,12 +307,21 @@ def form_teams():
             "Student 2": row["s2"]
         })
 
+    for row in selected_singles:
+        rows.append({
+            "Project Name": row["project"],
+            "Student 1": row["student"],
+            "Student 2": ""
+        })
+
     output_df = pd.DataFrame(rows)
     output_df = output_df.sort_values(by="Project Name")
 
-    output_df.to_csv(OUTPUT_FILE, index=False)
+    temp_output = OUTPUT_FILE + ".tmp"
+    output_df.to_csv(temp_output, index=False)
+    os.replace(temp_output,OUTPUT_FILE)
 
-    print(f"Output written to: {OUTPUT_FILE}")
+    print(f"Output written to: {OUTPUT_FILE}",flush=True)
 
     return output_df
 

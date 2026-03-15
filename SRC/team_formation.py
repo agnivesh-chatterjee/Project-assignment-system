@@ -64,8 +64,6 @@ def form_teams():
     # CONFIG
     # ============================================================
 
-    ALLOW_SINGLE_MEMBER_TEAMS = False
-    COMPLEMENTARITY_WEIGHT = 0.15
     SOLVER_MSG = False
 
     # ============================================================
@@ -173,6 +171,14 @@ def form_teams():
     students = sorted(scores_df["student"].unique().tolist())
     projects = sorted(projects_df["project_name"].unique().tolist())
 
+    if len(students) > 2 * len(projects):
+        raise ValueError(
+            f"Infeasible assignment:
+            {len(students)} students but only
+            {len(projects)} [rojects. "
+            f"Max capacity is {2 * len(projects)}."
+        )
+
     print(f"form_teams: students={len(students)}, projects={len(projects)}", flush=True)
 
 
@@ -250,15 +256,7 @@ def form_teams():
                 "final_score": score_lookup[(s,best_project)] - SINGLE_PENALTY
             })
 
-    single_data = pd.DataFrame(single_data)
-
-    single_data = (
-        single_data
-        .sort_values(["project","final_score"],ascending=[True,False])
-        .groupby("project",group_keys=False)
-        .head(30)
-        .reset_index(drop=True)
-    )
+    single_data = pd.DataFrame(single_data).reset_index(drop=True)
     
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
     print("form_teams: model built", flush=True)

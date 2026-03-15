@@ -275,6 +275,8 @@ elif menu == "Teams":
         except Exception as e:
             st.error(f"Failed to start recompute: {e}")
 
+    recompute_info = None
+    
     try:
         status_resp = requests.get(f"{API}/recompute-status",timeout=15)
         status_resp.raise_for_status()
@@ -288,8 +290,17 @@ elif menu == "Teams":
             st.success("Teams ready. Reloading...")
             st.rerun()
     except Exception as e:
-        st.warning("Teams not generated yet:")
+        st.warning("Could not fetch recompute status:")
         st.write(e)
+
+    if recompute_info and recompute_info.get("status")=="running":
+        st.info("Recompute is still running.Waiting for updated teams...")
+        time.sleep(5)
+        st.rerun()
+        st.stop()
+
+    if recompute_info and recompute_info.get("status") == "success":
+        st.success("Teams ready.")
 
     try:
         with st.spinner("Loading teams..."):

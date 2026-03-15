@@ -31,7 +31,6 @@ students = [
 "Shreya Singh","Shruti Sharma","Shuvodeep Dutta","Srishti Lakhotia",
 "Tejaswi","Titli Chanda","Trishita Patra"
 ]
-
 projects = [
 "Real-Time Flight Tracker",
 "Global Ship Radar – Strait of Hormuz & Arabian Sea",

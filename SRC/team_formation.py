@@ -1,4 +1,3 @@
-## team formation
 import pandas as pd
 import subprocess
 import itertools
@@ -116,7 +115,6 @@ def form_teams():
 
     pair_data = []
 
-    # FIXED: dynamic cap instead of hard 15
     top_students_per_project = min(len(students), 30)
 
     for p in projects:
@@ -173,8 +171,6 @@ def form_teams():
         for idx in single_data.index
     }
 
-    # FIXED OBJECTIVE (no double penalty)
-
     model += (
         lpSum((row["final_score"] + PAIR_ASSIGN_BONUS) * pair_vars[idx]
               for idx, row in pair_data.iterrows())
@@ -188,7 +184,6 @@ def form_teams():
     # ============================================================
 
     # Each student exactly once
-
     for s in students:
 
         pair_terms = [
@@ -206,7 +201,6 @@ def form_teams():
         model += lpSum(pair_terms + single_terms) == 1
 
     # Each project ≤ 1 team
-
     for p in projects:
 
         pair_terms = [
@@ -230,7 +224,6 @@ def form_teams():
     print("form_teams: solving model", flush=True)
 
     status = model.solve(PULP_CBC_CMD(msg=False))
-
     status_str = LpStatus[status]
 
     print(f"Solver status: {status_str}", flush=True)
@@ -256,18 +249,22 @@ def form_teams():
 
     rows = []
 
+    # Pairs
     for row in selected_pairs:
         rows.append({
             "Project Name": row["project"],
             "Student 1": row["s1"],
-            "Student 2": row["s2"]
+            "Student 2": row["s2"],
+            "Team Score": row["final_score"] + PAIR_ASSIGN_BONUS
         })
 
+    # Singles
     for row in selected_singles:
         rows.append({
             "Project Name": row["project"],
             "Student 1": row["student"],
-            "Student 2": ""
+            "Student 2": "",
+            "Team Score": row["final_score"]
         })
 
     output_df = pd.DataFrame(rows).sort_values(by="Project Name").reset_index(drop=True)

@@ -173,9 +173,7 @@ def form_teams():
 
     if len(students) > 2 * len(projects):
         raise ValueError(
-            f"Infeasible assignment:
-            {len(students)} students but only
-            {len(projects)} [rojects. "
+            f"Infeasible assignment: {len(students)} students but only {len(projects)} projects. "
             f"Max capacity is {2 * len(projects)}."
         )
 

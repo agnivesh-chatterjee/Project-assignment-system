@@ -195,7 +195,7 @@ def get_scores():
 
 @app.get("/teams")
 def get_teams():
-    try
+    try:
         teams = load_teams()
         if teams.empty:
             return []

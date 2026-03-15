@@ -1,4 +1,3 @@
-## dashboard.py
 import streamlit as st
 import requests
 import pandas as pd
@@ -15,25 +14,26 @@ st.set_page_config(page_title="Project–Student Matching Dashboard", layout="wi
 
 st.title("Project–Student Matching Dashboard")
 
-# ---------- TABLE HEADER STYLE ----------
-def style_table(df):
-    return df.style.set_table_styles(
-        [{
+# ---------- STYLE TABLE HEADERS GREEN ----------
+def style_df(df):
+    return df.style.set_table_styles([
+        {
             "selector": "th",
             "props": [
                 ("background-color", "#00C46A"),
                 ("color", "black"),
                 ("font-weight", "bold")
             ]
-        }]
-    )
+        }
+    ])
 
-# ---------- TABS ----------
+# ---------- TAB NAVIGATION ----------
 students_tab, projects_tab, scores_tab, teams_tab = st.tabs(
     ["Students", "Projects", "Match Scores", "Teams"]
 )
 
 # ---------------- STUDENTS ----------------
+
 with students_tab:
 
     st.header("Student Profiles")
@@ -47,8 +47,7 @@ with students_tab:
         st.error(f"Failed to load students: {e}")
         df = pd.DataFrame()
 
-    if not df.empty:
-        st.dataframe(style_table(df), use_container_width=True)
+    st.dataframe(style_df(df), use_container_width=True)
 
     st.subheader("Remove Student")
 
@@ -120,6 +119,10 @@ with students_tab:
         submit = st.form_submit_button("Submit Student")
 
         if submit:
+            if name.strip() == "":
+                st.error("Student name cannot be empty")
+                st.stop()
+
             payload = {
                 "name": name.strip(),
                 "college": college.strip(),
@@ -139,7 +142,7 @@ with students_tab:
             }
 
             try:
-                with st.spinner("Adding student..."):
+                with st.spinner("Adding student and recomputing teams..."):
                     add_resp = requests.post(f"{API}/students", json=payload, timeout=30)
                     add_resp.raise_for_status()
 
@@ -150,6 +153,7 @@ with students_tab:
                 st.error(f"Add student failed: {e}")
 
 # ---------------- PROJECTS ----------------
+
 with projects_tab:
 
     st.header("Projects")
@@ -163,10 +167,81 @@ with projects_tab:
         st.error(f"Failed to load projects: {e}")
         df = pd.DataFrame()
 
-    if not df.empty:
-        st.dataframe(style_table(df), use_container_width=True)
+    st.dataframe(style_df(df), use_container_width=True)
+
+    st.subheader("Remove Project")
+
+    if not df.empty and "project_name" in df.columns:
+
+        project_name = st.selectbox(
+            "Select Project to Remove",
+            df["project_name"]
+        )
+
+        if st.button("Delete Project"):
+            try:
+                with st.spinner("Removing project and recomputing teams..."):
+                    delete_resp = requests.delete(f"{API}/projects/{project_name}", timeout=30)
+                    delete_resp.raise_for_status()
+
+                st.success("Project removed")
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"Delete project failed: {e}")
+
+    st.subheader("Add Project")
+
+    project = st.text_input("Project Name")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        python_weight = st.slider("Python Weight", 1, 5)
+        ml = st.slider("ML Weight", 1, 5)
+
+    with col2:
+        api = st.slider("API Weight", 1, 5)
+        frontend = st.slider("Frontend Weight", 1, 5)
+
+    with col3:
+        data_weight = st.slider("Data Weight", 1, 5)
+        systems = st.slider("Systems Weight", 1, 5)
+
+    with col4:
+        viz = st.slider("Viz Weight", 1, 5)
+        devops = st.slider("DevOps Weight", 1, 5)
+
+    if st.button("Add Project"):
+        if project.strip() == "":
+            st.error("Project name cannot be empty")
+            st.stop()
+
+        payload = {
+            "project_name": project.strip(),
+            "Python": python_weight,
+            "ML": ml,
+            "APIs": api,
+            "Frontend": frontend,
+            "Data": data_weight,
+            "Systems": systems,
+            "Viz": viz,
+            "DevOps": devops
+        }
+
+        try:
+            with st.spinner("Adding project and recomputing teams..."):
+                add_resp = requests.post(f"{API}/projects", json=payload, timeout=30)
+                add_resp.raise_for_status()
+
+            st.success("Project added")
+            st.rerun()
+
+        except Exception as e:
+            st.error(f"Add project failed: {e}")
 
 # ---------------- MATCH SCORES ----------------
+
 with scores_tab:
 
     st.header("Compatibility Matrix")
@@ -178,7 +253,7 @@ with scores_tab:
             df = pd.DataFrame(scores.json())
 
         st.dataframe(
-            style_table(df).background_gradient(cmap="viridis"),
+            style_df(df).background_gradient(cmap="viridis"),
             use_container_width=True
         )
 
@@ -187,18 +262,54 @@ with scores_tab:
         st.write(e)
 
 # ---------------- TEAMS ----------------
+
 with teams_tab:
 
     st.header("Suggested Teams")
-
+    st.write("Click recompute teams to get the new updated teams. Since we are use free FASTAPI servers, it might take a little time to recompute. If it does not recompute, pls refresh this tab and click recompute again as the server may have timed out")
     if st.button("Recompute Teams"):
         try:
             with st.spinner("Recomputing teams..."):
                 resp = requests.post(f"{API}/recompute", timeout=30)
                 resp.raise_for_status()
-                st.success("Recompute started.")
+                data = resp.json()
+
+                if data.get("status") == "already_running":
+                    st.warning("Recompute is already running.")
+                else:
+                    st.success("Recompute started in background.")
+
         except Exception as e:
             st.error(f"Failed to start recompute: {e}")
+
+    recompute_info = None
+
+    try:
+        status_resp = requests.get(f"{API}/recompute-status", timeout=15)
+        status_resp.raise_for_status()
+        recompute_info = status_resp.json()
+
+        st.write(f"Recompute status:{recompute_info.get('status','unknown')}")
+
+        if recompute_info.get("detail"):
+            st.write(recompute_info["detail"])
+
+        if recompute_info.get("status") == "failed":
+            st.error(f"Recompute failed:{recompute_info.get('detail','Unknown error')}")
+            st.stop()
+
+    except Exception as e:
+        st.warning("Could not fetch recompute status:")
+        st.write(e)
+
+    if recompute_info and recompute_info.get("status") == "running":
+        st.info("Recompute is still running.Waiting for updated teams...")
+        time.sleep(5)
+        st.rerun()
+        st.stop()
+
+    if recompute_info and recompute_info.get("status") == "success":
+        st.success("Teams ready.")
 
     try:
         with st.spinner("Loading teams..."):
@@ -206,8 +317,7 @@ with teams_tab:
             teams.raise_for_status()
             df = pd.DataFrame(teams.json())
 
-        if not df.empty:
-            st.dataframe(style_table(df), use_container_width=True)
+        st.dataframe(style_df(df), use_container_width=True)
 
     except Exception as e:
         st.error("Failed to load teams.")

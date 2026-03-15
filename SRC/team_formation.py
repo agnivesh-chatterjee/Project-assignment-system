@@ -260,32 +260,40 @@ def form_teams():
     SINGLE_PENALTY = 1000
     model += lpSum((row["final_score"]+PAIR_ASSIGN_BONUS) * pair_vars[idx] for idx, row in pair_data.iterrows()) + lpSum((row["final_score"]-SINGLE_PENALTY) * single_vars[idx] for idx, row in single_data.iterrows())
 
+       # Each student can appear in exactly one selected team
     for s in students:
-        terms = []
-        for idx, row in pair_data.iterrows():
-            if row["s1"] == s or row["s2"] == s:
-                terms.append(pair_vars[idx])
+        pair_terms = [
+            pair_vars[idx]
+            for idx, row in pair_data.iterrows()
+            if row["s1"] == s or row["s2"] == s
+        ]
+        single_terms = [
+            single_vars[idx]
+            for idx, row in single_data.iterrows()
+            if row["student"] == s
+        ]
+        model += lpSum(pair_terms + single_terms) == 1, f"student_once_{s}"
 
-        for idx, row in single_data.iterrows():
-            if row["student"] == s:
-                terms.append(single_vars[idx])
-                
-        model += lpSum(terms) == 1
-
+    # Each project can be assigned at most one team
     for p in projects:
-        terms = []
-        for idx, row in pair_data.iterrows():
-            if row["project"] == p:
-                terms.append(pair_vars[idx])
-
-        for idx, row in single_data.iterrows():
-            if row["project"] == p:
-                terms.append(single_vars[idx])
-        model += lpSum(terms) <= 1
+        pair_terms = [
+            pair_vars[idx]
+            for idx, row in pair_data.iterrows()
+            if row["project"] == p
+        ]
+        single_terms = [
+            single_vars[idx]
+            for idx, row in single_data.iterrows()
+            if row["project"] == p
+        ]
+        model += lpSum(pair_terms + single_terms) <= 1, f"project_once_{p}"
 
     print("form_teams: starting solver", flush=True)
-    status = model.solve(PULP_CBC_CMD(msg = False,timeLimit=30))
+    status = model.solve(PULP_CBC_CMD(msg = False))
     print(f"form_teams: solver finished with status={LpStatus[status]}", flush=True)
+    status_str = LpStatus[status]
+    if status_str != "Optimal":
+        raise RuntimeError(f"Solver did not return an optimal solution. Status: {status_str}")
 
     selected_pairs = []
     for idx, var in pair_vars.items():
@@ -315,7 +323,25 @@ def form_teams():
         })
 
     output_df = pd.DataFrame(rows)
-    output_df = output_df.sort_values(by="Project Name")
+    output_df = output_df.sort_values(by="Project Name").reset_index(drop=True)
+
+    # Hard validation: no duplicate projects, no duplicate students
+    if output_df["Project Name"].duplicated().any():
+        dup_projects = output_df.loc[
+            output_df["Project Name"].duplicated(), "Project Name"
+        ].tolist()
+        raise RuntimeError(f"Duplicate project assignments found: {dup_projects}")
+
+    assigned_students = pd.concat(
+        [output_df["Student 1"], output_df["Student 2"]],
+        ignore_index=True
+    )
+    assigned_students = assigned_students.astype(str).str.strip()
+    assigned_students = assigned_students[assigned_students != ""]
+
+    if assigned_students.duplicated().any():
+        dup_students = assigned_students[assigned_students.duplicated()].tolist()
+        raise RuntimeError(f"Duplicate student assignments found: {dup_students}")
 
     temp_output = OUTPUT_FILE + ".tmp"
     output_df.to_csv(temp_output, index=False)
@@ -324,7 +350,6 @@ def form_teams():
     print(f"Output written to: {OUTPUT_FILE}",flush=True)
 
     return output_df
-
 
 if __name__ == "__main__":
     form_teams()

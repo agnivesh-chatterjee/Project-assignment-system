@@ -1,113 +1,79 @@
+## dashboard.py
 import streamlit as st
 import requests
 import pandas as pd
+from pathlib import Path
+import os
+import time
 
-API = "https://project-assignment-system-2.onrender.com"
+API = os.getenv("API_BASE_URL", "https://project-assignment-system-krrk.onrender.com")
+
+
+# locate repo root and database folder safely
+ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = ROOT / "database"
 
 st.set_page_config(page_title="Project–Student Matching Dashboard", layout="wide")
+
 st.title("Project–Student Matching Dashboard")
-
-
-# ============================================================
-# SAFE API FUNCTIONS
-# ============================================================
-
-def api_get(endpoint):
-
-    try:
-        r = requests.get(f"{API}/{endpoint}", timeout=20)
-
-        if r.status_code == 200:
-            return r.json()
-
-        st.error(f"API error {r.status_code} for {endpoint}")
-
-    except Exception as e:
-        st.error(f"Connection failed: {e}")
-
-    return []
-
-
-def api_post(endpoint, payload=None):
-
-    try:
-        r = requests.post(f"{API}/{endpoint}", json=payload, timeout=30)
-
-        if r.status_code != 200:
-            st.error(f"POST failed: {endpoint}")
-
-    except Exception as e:
-        st.error(f"POST error: {e}")
-
-
-def api_delete(endpoint):
-
-    try:
-        r = requests.delete(f"{API}/{endpoint}", timeout=20)
-
-        if r.status_code != 200:
-            st.error(f"DELETE failed: {endpoint}")
-
-    except Exception as e:
-        st.error(f"DELETE error: {e}")
-
-
-def recompute_pipeline():
-
-    with st.spinner("Recomputing match scores and teams..."):
-
-        api_post("recompute")
-
-    st.success("Matching pipeline completed")
-
-
-# ============================================================
-# MENU
-# ============================================================
 
 menu = st.sidebar.selectbox(
     "Navigation",
-    ["Students","Projects","Match Scores","Teams"]
+    ["Students", "Projects", "Match Scores", "Teams"],
+    key="main_menu"
 )
 
-
-# ============================================================
-# STUDENTS
-# ============================================================
+# ---------------- STUDENTS ----------------
 
 if menu == "Students":
 
     st.header("Student Profiles")
 
-    students = api_get("students")
-    df = pd.DataFrame(students)
+    try:
+        resp = requests.get(f"{API}/students", timeout=30)
+        resp.raise_for_status()
+        students = resp.json()
+        df = pd.DataFrame(students)
+    except Exception as e:
+        st.error(f"Failed to load students: {e}")
+        df = pd.DataFrame()
 
     st.dataframe(df, use_container_width=True)
-
-    # ---------- REMOVE STUDENT ----------
 
     st.subheader("Remove Student")
 
     if not df.empty and "name" in df.columns:
 
-        student_name = st.selectbox("Select Student", df["name"])
+        student_name = st.selectbox(
+            "Select Student to Remove",
+            df["name"]
+        )
 
         if st.button("Delete Student"):
+            try:
+                with st.spinner("Removing student and recomputing teams..."):
+                    delete_resp = requests.delete(f"{API}/students/{student_name}", timeout=30)
+                    delete_resp.raise_for_status()
 
-            api_delete(f"students/{student_name}")
+                st.success("Student removed")
+                st.rerun()
+            
+            except Exception as e:
+                st.error(f"Delete student failed: {e}")
 
-            recompute_pipeline()
-
-            st.rerun()
-
-    # ---------- ADD STUDENT ----------
 
     st.subheader("Add Student")
 
-    projects = api_get("projects")
-    project_names = [p["project_name"] for p in projects]
+    try:
+        resp = requests.get(f"{API}/projects", timeout=30)
+        resp.raise_for_status()
+        projects = resp.json()
+        project_names = [p["project_name"] for p in projects]
+    except Exception:
+        project_names = []
 
-    with st.form("student_form"):
+
+    with st.form("student_form",clear_on_submit = True):
 
         st.write("### Basic Information")
 
@@ -119,7 +85,7 @@ if menu == "Students":
 
         st.write("### Skills (1–5)")
 
-        col1,col2,col3,col4 = st.columns(4)
+        col1, col2, col3, col4 = st.columns(4)
 
         with col1:
             python_skill = st.slider("Python",1,5)
@@ -146,16 +112,15 @@ if menu == "Students":
         submit = st.form_submit_button("Submit Student")
 
         if submit:
-
-            if not name.strip():
-                st.error("Student name required")
+            if name.strip() == "":
+                st.error("Student name cannot be empty")
                 st.stop()
-
+                
             payload = {
-                "name": name,
-                "college": college,
-                "resume_link": resume,
-                "github_link": github,
+                "name": name.strip(),
+                "college": college.strip(),
+                "resume_link": resume.strip(),
+                "github_link": github.strip(),
                 "python": python_skill,
                 "ml": ml,
                 "api": api,
@@ -168,26 +133,33 @@ if menu == "Students":
                 "pref2": pref2,
                 "pref3": pref3
             }
+        
+            try:
+                with st.spinner("Adding student and recomputing teams..."):
+                    add_resp = requests.post(f"{API}/students", json=payload, timeout=30)
+                    add_resp.raise_for_status()
 
-            api_post("students", payload)
-
-            recompute_pipeline()
-
-            st.success("Student added")
-
-            st.rerun()
+                st.success("Student added")
+                st.rerun()
+        
+            except Exception as e:
+                st.error(f"Add student failed: {e}")
 
 
-# ============================================================
-# PROJECTS
-# ============================================================
+
+# ---------------- PROJECTS ----------------
 
 elif menu == "Projects":
-
     st.header("Projects")
 
-    projects = api_get("projects")
-    df = pd.DataFrame(projects)
+    try:
+        resp = requests.get(f"{API}/projects", timeout=30)
+        resp.raise_for_status()
+        projects = resp.json()
+        df = pd.DataFrame(projects)
+    except Exception as e:
+        st.error(f"Failed to load projects: {e}")
+        df = pd.DataFrame()
 
     st.dataframe(df, use_container_width=True)
 
@@ -195,21 +167,29 @@ elif menu == "Projects":
 
     if not df.empty and "project_name" in df.columns:
 
-        project_name = st.selectbox("Select Project", df["project_name"])
+        project_name = st.selectbox(
+            "Select Project to Remove",
+            df["project_name"]
+        )
 
         if st.button("Delete Project"):
+            try:
+                with st.spinner("Removing project and recomputing teams..."):
+                    delete_resp = requests.delete(f"{API}/projects/{project_name}", timeout=30)
+                    delete_resp.raise_for_status()
 
-            api_delete(f"projects/{project_name}")
+                st.success("Project removed")
+                st.rerun()
 
-            recompute_pipeline()
+            except Exception as e:
+                st.error(f"Delete project failed: {e}")
 
-            st.rerun()
 
     st.subheader("Add Project")
 
     project = st.text_input("Project Name")
 
-    col1,col2,col3,col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         python_weight = st.slider("Python Weight",1,5)
@@ -228,13 +208,12 @@ elif menu == "Projects":
         devops = st.slider("DevOps Weight",1,5)
 
     if st.button("Add Project"):
-
-        if not project.strip():
-            st.error("Project name required")
+        if project.strip() == "":
+            st.error("Project name cannot be empty")
             st.stop()
-
+            
         payload = {
-            "project_name": project,
+            "project_name": project.strip(),
             "Python": python_weight,
             "ML": ml,
             "APIs": api,
@@ -244,54 +223,95 @@ elif menu == "Projects":
             "Viz": viz,
             "DevOps": devops
         }
+        
+        try:
+            with st.spinner("Adding project and recomputing teams..."):
+                add_resp = requests.post(f"{API}/projects", json=payload, timeout=30)
+                add_resp.raise_for_status()
+            
+            st.success("Project added")
+            st.rerun()
+        
+        except Exception as e:
+            st.error(f"Add project failed: {e}")
 
-        api_post("projects", payload)
-
-        recompute_pipeline()
-
-        st.success("Project added")
-
-        st.rerun()
 
 
-# ============================================================
-# MATCH SCORES
-# ============================================================
+# ---------------- MATCH SCORES ----------------
 
 elif menu == "Match Scores":
 
     st.header("Compatibility Matrix")
 
-    scores = api_get("scores")
-    df = pd.DataFrame(scores)
+    try:
+        with st.spinner("Loading compatibility scores..."):
+            scores = requests.get(f"{API}/scores",timeout=30)
+            scores.raise_for_status()
+            df = pd.DataFrame(scores.json())
 
-    if df.empty:
-        st.warning("Compatibility scores not generated yet")
-    else:
         st.dataframe(
             df.style.background_gradient(cmap="viridis"),
             use_container_width=True
         )
 
+    except Exception as e:
+        st.warning("Compatibility scores not generated yet.")
+        st.write(e)
 
-# ============================================================
-# TEAMS
-# ============================================================
+# ---------------- TEAMS ----------------
 
 elif menu == "Teams":
 
     st.header("Suggested Teams")
+    
+    if st.button("Recompute Teams"):
+        try:
+            with st.spinner("Recomputing teams..."):
+                resp = requests.post(f"{API}/recompute",timeout=30)
+                resp.raise_for_status()
+                data = resp.json()
+                if data.get("status") == "already_running":
+                    st.warning("Recompute is already running.")
+                else:
+                    st.success("Recompute started in background.")
+        except Exception as e:
+            st.error(f"Failed to start recompute: {e}")
 
-    teams = api_get("teams")
-    df = pd.DataFrame(teams)
+    recompute_info = None
+    
+    try:
+        status_resp = requests.get(f"{API}/recompute-status",timeout=15)
+        status_resp.raise_for_status()
+        recompute_info = status_resp.json()
 
-    if df.empty:
-        st.warning("Teams not generated yet")
-    else:
+        st.write(f"Recompute status:{recompute_info.get('status','unknown')}")
+        if recompute_info.get("detail"):
+            st.write(recompute_info["detail"])
+            
+        if recompute_info.get("status") == "failed":
+            st.error(f"Recompute failed:{recompute_info.get('detail','Unknown error')}")
+            st.stop()
+    except Exception as e:
+        st.warning("Could not fetch recompute status:")
+        st.write(e)
+
+    if recompute_info and recompute_info.get("status")=="running":
+        st.info("Recompute is still running.Waiting for updated teams...")
+        time.sleep(5)
+        st.rerun()
+        st.stop()
+
+    if recompute_info and recompute_info.get("status") == "success":
+        st.success("Teams ready.")
+
+    try:
+        with st.spinner("Loading teams..."):
+            teams = requests.get(f"{API}/teams",timeout=60)
+            teams.raise_for_status()
+            df = pd.DataFrame(teams.json())
+
         st.dataframe(df, use_container_width=True)
 
-    if st.button("Recompute Teams"):
-
-        recompute_pipeline()
-
-        st.rerun()
+    except Exception as e:
+        st.error("Failed to loead teams.")
+        st.write(e)

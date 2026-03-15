@@ -265,11 +265,27 @@ elif menu == "Teams":
     if st.button("Recompute Teams"):
         try:
             with st.spinner("Recomputing teams..."):
-                resp = requests.post(f"{API}/recompute",timeout=300)
+                resp = requests.post(f"{API}/recompute",timeout=30)
                 resp.raise_for_status()
-            st.success("Teams recomputed")
+                data = resp.json()
+                if data.get("status") == "already_running":
+                    st.warning("Recompute is already running.")
+                else:
+                    st.success("Recompute started in background.")
         except Exception as e:
-            st.error(f"Recompute failed: {e}")
+            st.error(f"Failed to start recompute: {e}")
+
+    try:
+        status_resp = requests.get(f"{API}/recompute-status",timeout=15)
+        status_resp.raise_for_status()
+        recompute_info = status_resp.json()
+
+        st.write(f"Recompute status:{recompute_info.get('status','unknown')}")
+        if recompute_info.get("detail"):
+            st.write(recompute_info["detail"])
+    except Exception as e:
+        st.warning("Teams not generated yet:")
+        st.write(e)
 
     try:
         with st.spinner("Loading teams..."):

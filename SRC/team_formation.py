@@ -222,12 +222,7 @@ def form_teams():
                 "final_score": final_score
             })
     print(f"form_teams: pair_data rows before dataframe={len(pair_data)}", flush=True)
-    pair_data = pd.DataFrame(pair_data)
-    pair_data = (
-        pair_data
-        .reset_index(drop=True)
-    )
-
+    pair_data = pd.DataFrame(pair_data).reset_index(drop=True)
     print(f"form_teams: pair_data rows after dataframe={len(pair_data)}", flush=True)
 
     #-------------Single assignments-------------------------------------------------------------------
@@ -289,7 +284,7 @@ def form_teams():
         model += lpSum(terms) <= 1
 
     print("form_teams: starting solver", flush=True)
-    status = model.solve(PULP_CBC_CMD(timeLimit=30))
+    status = model.solve(PULP_CBC_CMD(msg = False,timeLimit=30))
     print(f"form_teams: solver finished with status={LpStatus[status]}", flush=True)
 
     selected_pairs = []

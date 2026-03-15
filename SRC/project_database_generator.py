@@ -60,7 +60,7 @@ projects = [
 "Cloud Resource Usage Analyzer",
 "Real-Time Log Analytics Platform"
 ]
-
+projects=projects[:20]
 descriptions = [
 "Real-time visualization and analysis dashboard",
 "AI-powered analytics platform",

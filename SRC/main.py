@@ -176,7 +176,10 @@ def load_scores():
 
 def load_teams():
     if os.path.exists(teams_path):
-        return pd.read_csv(teams_path)
+        try:
+            return pd.read_csv(teams_path)
+        except Exception:
+            return pd.DataFrame()
     return pd.DataFrame()
 
 
@@ -192,5 +195,11 @@ def get_scores():
 
 @app.get("/teams")
 def get_teams():
-    teams = load_teams()
-    return teams.to_dict(orient="records")
+    try
+        teams = load_teams()
+        if teams.empty:
+            return []
+            
+        return teams.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500,detail=f"Failed to load teams:{e}")

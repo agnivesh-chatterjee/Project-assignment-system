@@ -5,3 +5,4 @@ uvicorn
 requests
 pulp
 matplotlib
+altair==4.2.2

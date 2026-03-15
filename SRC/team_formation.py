@@ -237,6 +237,18 @@ def form_teams():
                 "student":s,
                 "project":p,
                 "final_score":score_lookup[(s,p)] - SINGLE_PENALTY})
+            
+    students_in_pairs = set(pair_data["s1"]).union(set(pair_data["s2"]))
+    missing_students = [s for s in students if s not in students_in_pairs]
+    if missing_students:
+        print(f"Adding fallback singles for:{missing_students}",flush=True)
+        for s in missing_students:
+            best_project = max(projects,key=lambda p:score_lookup[(s,p)])
+            single_data.append({
+                "student":s,
+                "project":best_project,
+                "final_score": score_lookup[(s,best_project)] - SINGLE_PENALTY
+            })
 
     single_data = pd.DataFrame(single_data)
 
@@ -247,18 +259,7 @@ def form_teams():
         .head(30)
         .reset_index(drop=True)
     )
-            
-    students_in_pairs = set(pair_data["s1"]).union(set(pair_data["s2"]))
-    missing_students = [s for s in students if s not in students_in_pairs]
-    if missing_students:
-        print(f"Adding fallback singles for:{missing_students}",flush=True)
-    for s in missing_students:
-        best_project = max(projects,key=lambda p:score_lookup[(s,p)])
-        single_data.append({
-            "student":s,
-            "project":best_project,
-            "final_score": score_lookup[(s,best_project)]
-        })
+    
     model = LpProblem("Project_Student_Team_Formation", LpMaximize)
     print("form_teams: model built", flush=True)
 

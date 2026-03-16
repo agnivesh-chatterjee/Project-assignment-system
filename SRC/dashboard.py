@@ -266,7 +266,7 @@ with scores_tab:
 with teams_tab:
 
     st.header("Suggested Teams")
-    st.write("Click recompute teams to get the new updated teams. Since we are use free FASTAPI servers, it might take a little time to recompute. If it does not recompute, pls refresh this tab and click recompute again as the server may have timed out")
+    st.write("Click recompute teams to get the new updated teams. Since we are using a free service: dashboard.render, it may take some time. In case of the recompute taking longer than 2 minutes, we advise refreshing the page and clicking recompute again as the free render server may have gone to sleep.")
     if st.button("Recompute Teams"):
         try:
             with st.spinner("Recomputing teams..."):
